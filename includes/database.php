@@ -402,6 +402,270 @@ function getRecipeWithImage($id) {
     return null;
 }
 
+// Profile functions
+function getUserById($user_uid) {
+    global $conn;
+    
+    // Try firebase_uid first
+    $sql = "SELECT * FROM users WHERE firebase_uid = ? LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('s', $user_uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            return $row;
+        }
+    }
+    
+    return null;
+}
+
+function getUserStats($user_uid) {
+    global $conn;
+    
+    // Get local user id
+    $user_id = null;
+    $sql = "SELECT id FROM users WHERE firebase_uid = ? LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('s', $user_uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $user_id = $row['id'];
+        }
+    }
+    
+    if (!$user_id) {
+        return [
+            'total_recipes' => 0,
+            'total_favorites' => 0,
+            'recipes_tried' => 0,
+            'average_rating' => 0.0
+        ];
+    }
+    
+    // Count total recipes (if we have a user_id column in resep table)
+    $total_recipes = 0;
+    $res = $conn->query("SHOW COLUMNS FROM resep LIKE 'user_id'");
+    if ($res && $res->num_rows > 0) {
+        $count_result = $conn->query("SELECT COUNT(*) as count FROM resep WHERE user_id = $user_id");
+        if ($count_result) {
+            $row = $count_result->fetch_assoc();
+            $total_recipes = $row['count'] ?? 0;
+        }
+    }
+    
+    // Count total favorites
+    $colInfo = detectFavoritUserColumn();
+    $total_favorites = 0;
+    if ($colInfo) {
+        $count_result = $conn->query("SELECT COUNT(*) as count FROM favorit WHERE {$colInfo['name']} = $user_id");
+        if ($count_result) {
+            $row = $count_result->fetch_assoc();
+            $total_favorites = $row['count'] ?? 0;
+        }
+    }
+    
+    // Count recipes tried (average rating count)
+    $recipes_tried = 0;
+    $res = $conn->query("SHOW COLUMNS FROM rating LIKE 'user_id'");
+    if ($res && $res->num_rows > 0) {
+        $count_result = $conn->query("SELECT COUNT(*) as count FROM rating WHERE user_id = $user_id");
+        if ($count_result) {
+            $row = $count_result->fetch_assoc();
+            $recipes_tried = $row['count'] ?? 0;
+        }
+    }
+    
+    // Average rating
+    $average_rating = 0.0;
+    $res = $conn->query("SHOW COLUMNS FROM rating LIKE 'rating'");
+    if ($res && $res->num_rows > 0) {
+        $avg_result = $conn->query("SELECT AVG(rating) as avg_rating FROM rating WHERE user_id = $user_id");
+        if ($avg_result) {
+            $row = $avg_result->fetch_assoc();
+            $average_rating = round($row['avg_rating'] ?? 0, 1);
+        }
+    }
+    
+    return [
+        'total_recipes' => $total_recipes,
+        'total_favorites' => $total_favorites,
+        'recipes_tried' => $recipes_tried,
+        'average_rating' => $average_rating
+    ];
+}
+
+function getUserFavoriteRecipes($user_uid, $limit = 6) {
+    global $conn;
+    
+    // Get local user id
+    $user_id = null;
+    $sql = "SELECT id FROM users WHERE firebase_uid = ? LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('s', $user_uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $user_id = $row['id'];
+        }
+    }
+    
+    if (!$user_id) {
+        return [];
+    }
+    
+    $colInfo = detectFavoritUserColumn();
+    if (!$colInfo) {
+        return [];
+    }
+    
+    $sql = "SELECT r.* FROM resep r 
+            JOIN favorit f ON r.id = f.resep_id 
+            WHERE f.{$colInfo['name']} = ? 
+            ORDER BY f.id DESC 
+            LIMIT ?";
+    
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+    
+    $stmt->bind_param('ii', $user_id, $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $recipes = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['image_url'] = getRecipeImage($row);
+        $recipes[] = $row;
+    }
+    
+    return $recipes;
+}
+
+function getUserRecipes($user_uid, $limit = 6) {
+    global $conn;
+    
+    // For now, return empty array if user recipes table doesn't exist
+    // This would need to be implemented if you have a user_id column in resep table
+    $res = $conn->query("SHOW COLUMNS FROM resep LIKE 'user_id'");
+    if (!$res || $res->num_rows === 0) {
+        return [];
+    }
+    
+    // Get local user id
+    $user_id = null;
+    $sql = "SELECT id FROM users WHERE firebase_uid = ? LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('s', $user_uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $user_id = $row['id'];
+        }
+    }
+    
+    if (!$user_id) {
+        return [];
+    }
+    
+    $sql = "SELECT r.* FROM resep r WHERE r.user_id = ? ORDER BY r.created_at DESC LIMIT ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+    
+    $stmt->bind_param('ii', $user_id, $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $recipes = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['image_url'] = getRecipeImage($row);
+        $row['views'] = 0; // Placeholder
+        $row['favorite_count'] = 0; // Placeholder
+        $row['status'] = 'published'; // Placeholder
+        $recipes[] = $row;
+    }
+    
+    return $recipes;
+}
+
+function updateUserProfile($user_uid, $fullname, $bio) {
+    global $conn;
+    
+    $sql = "UPDATE users SET display_name = ?, created_at = created_at WHERE firebase_uid = ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return false;
+    }
+    
+    $stmt->bind_param('ss', $fullname, $user_uid);
+    return $stmt->execute();
+}
+
+function changeUserPassword($user_uid, $current_password, $new_password) {
+    // This would require password field in users table which currently doesn't exist
+    // For Firebase-based auth, password changes should be done via Firebase
+    // Return true to not block the UI, but in reality this needs Firebase integration
+    return false;
+}
+
+function uploadUserAvatar($user_uid, $file) {
+    global $conn;
+    
+    if (!isset($file['tmp_name']) || empty($file['tmp_name'])) {
+        return ['success' => false, 'error' => 'File tidak valid'];
+    }
+    
+    // Create uploads directory if not exists
+    $upload_dir = __DIR__ . '/../assets/images/uploads/avatars/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+    
+    // Validate file type
+    $allowed_types = ['image/jpeg', 'image/png', 'image/webp'];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    if (!in_array($mime_type, $allowed_types)) {
+        return ['success' => false, 'error' => 'Tipe file tidak didukung. Gunakan JPG, PNG, atau WebP.'];
+    }
+    
+    // Validate file size (max 5MB)
+    if ($file['size'] > 5 * 1024 * 1024) {
+        return ['success' => false, 'error' => 'Ukuran file terlalu besar. Maksimal 5MB.'];
+    }
+    
+    // Generate unique filename
+    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = 'avatar_' . $user_uid . '_' . time() . '.' . $ext;
+    $filepath = $upload_dir . $filename;
+    $relative_path = 'assets/images/uploads/avatars/' . $filename;
+    
+    // Move uploaded file
+    if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+        return ['success' => false, 'error' => 'Gagal mengupload file'];
+    }
+    
+    // Update database
+    $sql = "UPDATE users SET photo_url = ? WHERE firebase_uid = ?";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('ss', $relative_path, $user_uid);
+        $stmt->execute();
+    }
+    
+    return ['success' => true, 'path' => $relative_path];
+}
+
 define('DB_FUNCTIONS_LOADED', true);
 }
 ?>
