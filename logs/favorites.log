@@ -1,0 +1,35 @@
+[2026-02-03 04:22:14] error toggling favorite: Cannot add or update a child row: a foreign key constraint fails (`resep_db`.`favorit`, CONSTRAINT `favorit_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)
+[2026-02-03 04:23:17] error toggling favorite: Cannot add or update a child row: a foreign key constraint fails (`resep_db`.`favorit`, CONSTRAINT `favorit_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)
+[2026-02-03 04:23:33] error toggling favorite: Cannot add or update a child row: a foreign key constraint fails (`resep_db`.`favorit`, CONSTRAINT `favorit_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)
+[2026-02-03 04:26:47] error toggling favorite: Unknown column 'uid' in 'field list'
+[2026-02-03 04:28:00] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:01] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:01] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:02] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:03] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:04] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:04] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:04] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:04] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:04] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:04] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:05] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=remove changed=1 fav=0
+[2026-02-03 04:28:05] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=1 fav=1
+[2026-02-03 04:28:06] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=1 action=add changed=1 fav=1
+[2026-02-03 04:28:06] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=1 action=remove changed=1 fav=0
+[2026-02-03 05:05:58] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=1 action=add changed=1 fav=1
+[2026-02-03 05:05:59] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=1 action=remove changed=1 fav=0
+[2026-02-03 05:06:00] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=1 action=add changed=1 fav=1
+[2026-02-05 01:00:57] user=Ql1pILdtfYbjjSJOsIcitrLRF7q1 recipe=2 action=add changed=0 fav=1
