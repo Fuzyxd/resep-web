@@ -38,8 +38,8 @@ if (isset($_SESSION['user'])) {
 }
 
 // Parse bahan dan cara masak
-$bahan_list = explode("\n", $recipe['bahan']);
-$cara_masak_list = explode("\n", $recipe['cara_masak']);
+$bahan_list = explode("\n", $recipe['bahan'] ?? '');
+$cara_masak_list = explode("\n", $recipe['cara_masak'] ?? '');
 
 // Get similar recipes
 $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
@@ -200,7 +200,7 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
         <div class="recipe-content-grid">
             <!-- Ingredients Section -->
             <div class="ingredients-section">
-                <div class="section-header">
+                <div class="section-header-row">
                     <h2><i class="fas fa-shopping-basket"></i> Bahan-bahan</h2>
                     <button class="btn btn-outline btn-sm" id="copyIngredients">
                         <i class="fas fa-copy"></i> Salin Bahan
@@ -233,7 +233,7 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
 
             <!-- Instructions Section -->
             <div class="instructions-section">
-                <div class="section-header">
+                <div class="section-header-row">
                     <h2><i class="fas fa-mortar-pestle"></i> Cara Membuat</h2>
                     <div class="step-counter">
                         <span id="currentStep">1</span> / <span id="totalSteps"><?= count(array_filter($cara_masak_list)) ?></span> Langkah
@@ -320,8 +320,8 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
         <?php if ($similar_recipes->num_rows > 0): ?>
         <div class="similar-recipes-section">
             <div class="section-header">
-                <h2>Resep Serupa</h2>
-                <p>Resep lain dalam kategori <?= htmlspecialchars($recipe['kategori']) ?></p>
+                <h2 class="section-title">Resep Serupa</h2>
+                <p class="section-subtitle">Resep lain dalam kategori <?= htmlspecialchars($recipe['kategori']) ?></p>
             </div>
             
             <div class="similar-recipes-grid">
@@ -350,8 +350,8 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
         <!-- Comments Section (Placeholder) -->
         <div class="comments-section">
             <div class="section-header">
-                <h2>Komentar & Ulasan</h2>
-                <p>Bagikan pengalaman Anda memasak resep ini</p>
+                <h2 class="section-title">Komentar & Ulasan</h2>
+                <p class="section-subtitle">Bagikan pengalaman Anda memasak resep ini</p>
             </div>
             
             <div class="comments-placeholder">
@@ -751,7 +751,7 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
-.section-header {
+.section-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -760,7 +760,7 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     border-bottom: 2px solid var(--light-gray);
 }
 
-.section-header h2 {
+.section-header-row h2 {
     font-size: 1.6rem;
     color: var(--dark);
     display: flex;
@@ -1339,7 +1339,7 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
         font-size: 1.8rem;
     }
     
-    .section-header {
+    .section-header-row {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;

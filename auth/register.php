@@ -1,5 +1,7 @@
 <?php 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (isset($_SESSION['user'])): ?>
     <script>window.location.href = '?page=home';</script>
     <?php exit(); ?>
@@ -234,6 +236,8 @@ if (isset($_SESSION['user'])): ?>
     user-select: none;
     font-size: 0.9rem;
     line-height: 1.4;
+    color: var(--gray);
+    font-weight: 400;
 }
 
 .checkbox-label input {
@@ -285,7 +289,7 @@ if (isset($_SESSION['user'])): ?>
 .terms-link {
     color: var(--primary);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .terms-link:hover {

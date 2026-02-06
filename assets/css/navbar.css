@@ -2,10 +2,15 @@
 .navbar {
     background: white;
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-    position: sticky;
+    position: fixed;
     top: 0;
     z-index: 1000;
     padding: 1rem 0;
+    width: 100%;
+}
+
+body {
+    padding-top: 90px;
 }
 
 .navbar .container {
@@ -64,13 +69,15 @@
     border-radius: 50px;
     padding: 5px 15px;
     margin-left: 1rem;
+    max-width: 260px;
+    width: 100%;
 }
 
 .search-box input {
     border: none;
     background: none;
     padding: 8px;
-    width: 200px;
+    width: 180px;
     outline: none;
     font-family: 'Poppins', sans-serif;
 }

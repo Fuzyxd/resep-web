@@ -83,11 +83,12 @@ function resolveLocalUserIdFromAuth($sessionUser) {
     if (!$sessionUser) return null;
 
     // If session user already has a numeric local id, return it
-    if (isset($sessionUser['id']) && is_numeric($sessionUser['id'])) return (int)$sessionUser['id'];
+    if (is_array($sessionUser) && isset($sessionUser['id']) && is_numeric($sessionUser['id'])) return (int)$sessionUser['id'];
 
     $candidates = ['uid', 'firebase_uid', 'auth_uid', 'user_uid', 'user'];
-    $email = $sessionUser['email'] ?? null;
-    $uid = $sessionUser['uid'] ?? null;
+    $email = is_array($sessionUser) ? ($sessionUser['email'] ?? null) : null;
+    $uid = is_array($sessionUser) ? ($sessionUser['uid'] ?? null) : (is_string($sessionUser) ? $sessionUser : null);
+    if (is_string($uid) && trim($uid) === '') $uid = null;
 
     // Try to match by known UID columns
     foreach ($candidates as $col) {
@@ -136,6 +137,11 @@ function resolveLocalUserIdFromAuth($sessionUser) {
     }
 
     if ($canInsert && ($uid || $email)) {
+        // If firebase_uid column exists but no uid provided, avoid insert that would default to ''
+        $firebaseCols = $conn->query("SHOW COLUMNS FROM users LIKE 'firebase_uid'");
+        if ($firebaseCols && $firebaseCols->num_rows > 0 && !$uid) {
+            return null;
+        }
         // Build insert columns dynamically, verify each exists to avoid unknown column errors
         $cols = [];
         $placeholders = [];
@@ -147,6 +153,10 @@ function resolveLocalUserIdFromAuth($sessionUser) {
             $uidCols = $conn->query("SHOW COLUMNS FROM users LIKE 'uid'");
             if ($uidCols && $uidCols->num_rows > 0) {
                 $cols[] = '`uid`'; $placeholders[] = '?'; $types .= 's'; $values[] = $uid;
+            }
+            $firebaseCols = $conn->query("SHOW COLUMNS FROM users LIKE 'firebase_uid'");
+            if ($firebaseCols && $firebaseCols->num_rows > 0) {
+                $cols[] = '`firebase_uid`'; $placeholders[] = '?'; $types .= 's'; $values[] = $uid;
             }
         }
 

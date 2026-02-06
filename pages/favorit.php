@@ -10,93 +10,115 @@ if (!isset($_SESSION['user'])) {
 
 $user_uid = $_SESSION['user']['uid'];
 $favorites = getUserFavorites($user_uid, 20);
+$user = $_SESSION['user'];
+
+// Get stats for display
+$stats = [
+    'total' => $favorites->num_rows,
+    'easy' => 0,
+    'medium' => 0,
+    'hard' => 0,
+    'total_time' => 0
+];
+
+if ($favorites->num_rows > 0) {
+    $favorites->data_seek(0); // Reset pointer
+    while ($recipe = $favorites->fetch_assoc()) {
+        switch(strtolower($recipe['tingkat_kesulitan'])) {
+            case 'mudah': $stats['easy']++; break;
+            case 'sedang': $stats['medium']++; break;
+            case 'sulit': $stats['hard']++; break;
+        }
+        $stats['total_time'] += ($recipe['waktu'] ?? 0);
+    }
+    $favorites->data_seek(0); // Reset pointer again for display
+}
 ?>
-<section class="favorites-section">
+
+<!-- Favorites Page -->
+<section class="favorites-page">
     <div class="container">
-        <!-- Header Section -->
-        <div class="favorites-header">
-            <div class="header-content">
-                <h1><i class="fas fa-heart"></i> Resep Favorit Saya</h1>
-                <p class="subtitle">Kumpulan resep yang telah Anda simpan untuk dimasak nanti</p>
-                
-                <div class="user-info">
-                    <div class="user-avatar">
-                        <img src="<?= $_SESSION['user']['photoURL'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($_SESSION['user']['displayName'] ?? 'User') ?>" 
-                             alt="<?= htmlspecialchars($_SESSION['user']['displayName'] ?? 'User') ?>">
-                    </div>
-                    <div class="user-details">
-                        <h3><?= htmlspecialchars($_SESSION['user']['displayName'] ?? 'User') ?></h3>
-                        <p class="email"><?= htmlspecialchars($_SESSION['user']['email'] ?? '') ?></p>
-                        <div class="stats">
-                            <span class="stat-item">
-                                <i class="fas fa-heart"></i>
-                                <span id="favoriteCount"><?= $favorites->num_rows ?></span> Resep
-                            </span>
-                            <span class="stat-item">
-                                <i class="fas fa-clock"></i>
-                                <span id="joinedDate">Bergabung <?= date('M Y', strtotime('-1 month')) ?></span>
-                            </span>
+        <!-- Hero Header -->
+        <div class="favorites-hero">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <i class="fas fa-heart"></i> Resep Favorit Saya
+                </h1>
+                <p class="hero-subtitle">
+                    Koleksi resep spesial yang telah Anda simpan untuk dimasak nanti
+                </p>
+            </div>
+            
+            <div class="user-profile">
+                <div class="profile-avatar">
+                    <img src="<?= htmlspecialchars($user['photoURL'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($user['displayName'] ?? 'User') . '&background=ff6b6b&color=fff') ?>" 
+                         alt="<?= htmlspecialchars($user['displayName'] ?? 'User') ?>">
+                </div>
+                <div class="profile-info">
+                    <h3><?= htmlspecialchars($user['displayName'] ?? 'User') ?></h3>
+                    <p class="profile-email">
+                        <i class="fas fa-envelope"></i> <?= htmlspecialchars($user['email'] ?? '') ?>
+                    </p>
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-heart"></i>
+                            <span id="favoriteCount"><?= $stats['total'] ?></span> Favorit
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            Bergabung <?= date('M Y', strtotime($user['created_at'] ?? '-1 month')) ?>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="header-actions">
-                <button class="btn btn-outline" id="sortBtn">
-                    <i class="fas fa-sort-amount-down"></i> Urutkan
-                </button>
-                <button class="btn btn-primary" id="shareListBtn">
-                    <i class="fas fa-share-alt"></i> Bagikan
-                </button>
             </div>
         </div>
 
         <!-- Stats Cards -->
         <div class="stats-cards">
             <div class="stat-card">
-                <div class="stat-icon easy">
+                <div class="stat-icon">
                     <i class="fas fa-smile"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="easyCount">0</h3>
-                    <p>Resep Mudah</p>
+                    <h3 id="easyCount"><?= $stats['easy'] ?></h3>
+                    <p>Mudah</p>
                 </div>
             </div>
             
             <div class="stat-card">
-                <div class="stat-icon medium">
+                <div class="stat-icon">
                     <i class="fas fa-meh"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="mediumCount">0</h3>
-                    <p>Resep Sedang</p>
+                    <h3 id="mediumCount"><?= $stats['medium'] ?></h3>
+                    <p>Sedang</p>
                 </div>
             </div>
             
             <div class="stat-card">
-                <div class="stat-icon hard">
+                <div class="stat-icon">
                     <i class="fas fa-fire"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="hardCount">0</h3>
-                    <p>Resep Sulit</p>
+                    <h3 id="hardCount"><?= $stats['hard'] ?></h3>
+                    <p>Sulit</p>
                 </div>
             </div>
             
             <div class="stat-card">
-                <div class="stat-icon total">
+                <div class="stat-icon">
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="totalTime">0</h3>
-                    <p>Total Waktu Masak</p>
+                    <h3 id="totalTime"><?= floor($stats['total_time'] / 60) ?>j <?= $stats['total_time'] % 60 ?>m</h3>
+                    <p>Total Waktu</p>
                 </div>
             </div>
         </div>
 
-        <!-- Search and Filter -->
+        <!-- Search and Filter Section -->
         <div class="filters-section">
-            <div class="search-box">
+            <div class="favorites-search">
                 <i class="fas fa-search"></i>
                 <input type="text" id="searchFavorites" placeholder="Cari resep favorit...">
                 <button class="clear-search" id="clearSearch">
@@ -104,39 +126,34 @@ $favorites = getUserFavorites($user_uid, 20);
                 </button>
             </div>
             
-            <div class="filter-options">
-                <div class="filter-group">
-                    <label for="categoryFilter"><i class="fas fa-filter"></i> Kategori:</label>
-                    <select id="categoryFilter" class="filter-select">
-                        <option value="all">Semua Kategori</option>
-                        <option value="Makanan Berat">Makanan Berat</option>
-                        <option value="Makanan Ringan">Makanan Ringan</option>
-                        <option value="Kue">Kue</option>
-                        <option value="Minuman">Minuman</option>
-                        <option value="Sarapan">Sarapan</option>
-                        <option value="Makanan Penutup">Makanan Penutup</option>
-                    </select>
-                </div>
+            <div class="filter-controls">
+                <select id="categoryFilter" class="filter-select">
+                    <option value="all">Semua Kategori</option>
+                    <option value="Makanan Berat">Makanan Berat</option>
+                    <option value="Makanan Ringan">Makanan Ringan</option>
+                    <option value="Kue & Roti">Kue & Roti</option>
+                    <option value="Minuman">Minuman</option>
+                    <option value="Sarapan">Sarapan</option>
+                    <option value="Makanan Penutup">Makanan Penutup</option>
+                </select>
                 
-                <div class="filter-group">
-                    <label for="difficultyFilter"><i class="fas fa-chart-line"></i> Tingkat:</label>
-                    <select id="difficultyFilter" class="filter-select">
-                        <option value="all">Semua Tingkat</option>
-                        <option value="mudah">Mudah</option>
-                        <option value="sedang">Sedang</option>
-                        <option value="sulit">Sulit</option>
-                    </select>
-                </div>
+                <select id="difficultyFilter" class="filter-select">
+                    <option value="all">Semua Tingkat</option>
+                    <option value="mudah">Mudah</option>
+                    <option value="sedang">Sedang</option>
+                    <option value="sulit">Sulit</option>
+                </select>
                 
-                <div class="filter-group">
-                    <label for="timeFilter"><i class="fas fa-clock"></i> Waktu:</label>
-                    <select id="timeFilter" class="filter-select">
-                        <option value="all">Semua Waktu</option>
-                        <option value="30">≤ 30 menit</option>
-                        <option value="60">≤ 60 menit</option>
-                        <option value="90">≤ 90 menit</option>
-                    </select>
-                </div>
+                <select id="timeFilter" class="filter-select">
+                    <option value="all">Semua Waktu</option>
+                    <option value="30">≤ 30 menit</option>
+                    <option value="60">≤ 60 menit</option>
+                    <option value="90">≤ 90 menit</option>
+                </select>
+                
+                <button class="btn btn-outline" id="sortBtn">
+                    <i class="fas fa-sort-amount-down"></i> Urutkan
+                </button>
             </div>
         </div>
 
@@ -154,76 +171,64 @@ $favorites = getUserFavorites($user_uid, 20);
                         
                         $total_time = ($recipe['waktu'] ?? 0);
                         $image_path = getRecipeImage($recipe);
+                        $added_date = strtotime($recipe['favorited_at'] ?? $recipe['created_at'] ?? 'now');
                     ?>
-                        <div class="favorite-card" 
+                        <div class="recipe-card" 
                              data-id="<?= $recipe['id'] ?>"
-                             data-category="<?= htmlspecialchars($recipe['kategori']) ?>"
+                             data-category="<?= htmlspecialchars($recipe['kategori'] ?? '') ?>"
                              data-difficulty="<?= htmlspecialchars($recipe['tingkat_kesulitan']) ?>"
                              data-time="<?= $total_time ?>"
-                             data-added="<?= strtotime($recipe['created_at'] ?? 'now') ?>">
+                             data-added="<?= $added_date ?>">
                             
-                            <!-- Remove from favorites button -->
-                            <button class="remove-favorite" data-recipe-id="<?= $recipe['id'] ?>">
-                                <i class="fas fa-times"></i>
-                            </button>
-                            
-                            <!-- Recipe Image -->
-                            <div class="favorite-image">
+                            <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>">
                                 <img src="<?= htmlspecialchars($image_path) ?>" 
                                      alt="<?= htmlspecialchars($recipe['judul']) ?>"
                                      loading="lazy">
-                                <div class="favorite-overlay">
-                                    <button class="quick-view" data-recipe-id="<?= $recipe['id'] ?>">
+                                <div class="recipe-overlay">
+                                    <span class="recipe-time"><?= $total_time ?> mnt</span>
+                                </div>
+                                <div class="quick-view-overlay">
+                                    <button class="quick-view-btn" data-recipe-id="<?= $recipe['id'] ?>">
                                         <i class="fas fa-eye"></i> Lihat Cepat
                                     </button>
                                 </div>
-                            </div>
+                            </a>
                             
-                            <!-- Recipe Info -->
-                            <div class="favorite-info">
-                                <div class="recipe-header">
-                                    <h3 class="recipe-title"><?= htmlspecialchars($recipe['judul']) ?></h3>
-                                    <span class="favorite-date">
-                                        <i class="far fa-calendar"></i>
-                                        <?= date('d M Y', strtotime($recipe['created_at'] ?? 'now')) ?>
-                                    </span>
-                                </div>
+                            <div class="recipe-content">
+                                <h3 class="recipe-title">
+                                    <a href="?page=resep&id=<?= $recipe['id'] ?>">
+                                        <?= htmlspecialchars($recipe['judul']) ?>
+                                    </a>
+                                </h3>
                                 
                                 <p class="recipe-description">
-                                    <?= htmlspecialchars(substr($recipe['deskripsi'] ?? '', 0, 80)) ?>
-                                    <?= strlen($recipe['deskripsi'] ?? '') > 80 ? '...' : '' ?>
+                                    <?= htmlspecialchars(substr($recipe['deskripsi'] ?? '', 0, 100)) ?>
+                                    <?= strlen($recipe['deskripsi'] ?? '') > 100 ? '...' : '' ?>
                                 </p>
                                 
                                 <div class="recipe-meta">
-                                    <div class="meta-item">
-                                        <i class="fas fa-clock"></i>
-                                        <span><?= $total_time ?> menit</span>
+                                    <div class="meta-info">
+                                        <div class="meta-item">
+                                            <i class="fas fa-clock"></i>
+                                            <span><?= $total_time ?> mnt</span>
+                                        </div>
+                                        <div class="meta-item">
+                                            <i class="fas fa-user-friends"></i>
+                                            <span><?= $recipe['porsi'] ?> porsi</span>
+                                        </div>
                                     </div>
-                                    <div class="meta-item">
-                                        <i class="fas fa-user-friends"></i>
-                                        <span><?= $recipe['porsi'] ?> porsi</span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i class="fas fa-fire"></i>
-                                        <span><?= $recipe['kategori'] ?></span>
-                                    </div>
-                                </div>
-                                
-                                <div class="difficulty-time">
+                                    
                                     <span class="difficulty-badge <?= $difficultyClass ?>">
                                         <?= ucfirst($recipe['tingkat_kesulitan']) ?>
-                                    </span>
-                                    <span class="time-badge">
-                                        <i class="far fa-clock"></i> <?= $total_time ?>m
                                     </span>
                                 </div>
                                 
                                 <div class="recipe-actions">
-                                    <a href="?page=resep&id=<?= $recipe['id'] ?>" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-utensils"></i> Masak Sekarang
+                                    <a href="?page=resep&id=<?= $recipe['id'] ?>" class="view-btn">
+                                        <i class="fas fa-eye"></i> Lihat Resep
                                     </a>
-                                    <button class="btn btn-outline btn-sm add-to-cart" data-recipe-id="<?= $recipe['id'] ?>">
-                                        <i class="fas fa-shopping-cart"></i> Bahan
+                                    <button class="favorite-btn active" data-recipe-id="<?= $recipe['id'] ?>">
+                                        <i class="fas fa-heart"></i>
                                     </button>
                                 </div>
                             </div>
@@ -231,33 +236,16 @@ $favorites = getUserFavorites($user_uid, 20);
                     <?php endwhile; ?>
                 </div>
                 
-                <!-- Empty State (hidden by default) -->
+                <!-- Empty Search State -->
                 <div class="empty-state" id="emptyState" style="display: none;">
                     <div class="empty-icon">
                         <i class="far fa-heart"></i>
                     </div>
                     <h3>Tidak Ada Resep yang Cocok</h3>
-                    <p>Coba ubah filter pencarian atau tambahkan resep baru ke favorit</p>
-                    <a href="?page=home" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Jelajahi Resep
-                    </a>
-                </div>
-                
-                <!-- No Favorites State -->
-                <div class="no-favorites" id="noFavorites" style="<?= $favorites->num_rows > 0 ? 'display: none;' : '' ?>">
-                    <div class="empty-icon">
-                        <i class="far fa-heart"></i>
-                    </div>
-                    <h3>Belum Ada Resep Favorit</h3>
-                    <p>Tambahkan resep favorit Anda untuk melihatnya di sini</p>
-                    <div class="action-buttons">
-                        <a href="?page=home" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Jelajahi Resep
-                        </a>
-                        <a href="?page=resep" class="btn btn-outline">
-                            <i class="fas fa-fire"></i> Resep Populer
-                        </a>
-                    </div>
+                    <p>Coba ubah filter pencarian Anda</p>
+                    <button class="btn btn-primary" id="clearAllFilters">
+                        <i class="fas fa-times"></i> Hapus Semua Filter
+                    </button>
                 </div>
             <?php else: ?>
                 <!-- No Favorites State -->
@@ -266,7 +254,7 @@ $favorites = getUserFavorites($user_uid, 20);
                         <i class="far fa-heart"></i>
                     </div>
                     <h3>Belum Ada Resep Favorit</h3>
-                    <p>Tambahkan resep favorit Anda untuk melihatnya di sini</p>
+                    <p>Mulai jelajahi resep dan tambahkan ke favorit Anda</p>
                     <div class="action-buttons">
                         <a href="?page=home" class="btn btn-primary">
                             <i class="fas fa-search"></i> Jelajahi Resep
@@ -279,70 +267,80 @@ $favorites = getUserFavorites($user_uid, 20);
             <?php endif; ?>
         </div>
 
-        <!-- Quick View Modal -->
-        <div class="modal" id="quickViewModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Detail Resep</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="modal-body" id="quickViewContent">
-                    <!-- Content will be loaded here -->
-                </div>
+        <!-- Share Button -->
+        <?php if ($favorites->num_rows > 0): ?>
+            <div class="share-section">
+                <button class="btn btn-outline" id="shareListBtn">
+                    <i class="fas fa-share-alt"></i> Bagikan Daftar Favorit
+                </button>
             </div>
-        </div>
-
-        <!-- Share Modal -->
-        <div class="modal" id="shareModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Bagikan Daftar Favorit</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="share-options">
-                        <button class="share-option" data-platform="copy">
-                            <i class="fas fa-copy"></i>
-                            <span>Salin Link</span>
-                        </button>
-                        <button class="share-option" data-platform="whatsapp">
-                            <i class="fab fa-whatsapp"></i>
-                            <span>WhatsApp</span>
-                        </button>
-                        <button class="share-option" data-platform="facebook">
-                            <i class="fab fa-facebook"></i>
-                            <span>Facebook</span>
-                        </button>
-                        <button class="share-option" data-platform="twitter">
-                            <i class="fab fa-twitter"></i>
-                            <span>Twitter</span>
-                        </button>
-                    </div>
-                    <div class="share-link">
-                        <input type="text" id="shareUrl" readonly value="<?= htmlspecialchars("http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]") ?>">
-                        <button class="btn btn-primary" id="copyLink">
-                            <i class="fas fa-copy"></i> Salin
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
 </section>
 
+<!-- Quick View Modal -->
+<div class="modal" id="quickViewModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Detail Resep</h3>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body" id="quickViewContent">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal" id="shareModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Bagikan Daftar Favorit</h3>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="share-options">
+                <button class="share-option" data-platform="copy">
+                    <i class="fas fa-copy"></i>
+                    <span>Salin Link</span>
+                </button>
+                <button class="share-option" data-platform="whatsapp">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>WhatsApp</span>
+                </button>
+                <button class="share-option" data-platform="facebook">
+                    <i class="fab fa-facebook"></i>
+                    <span>Facebook</span>
+                </button>
+                <button class="share-option" data-platform="twitter">
+                    <i class="fab fa-twitter"></i>
+                    <span>Twitter</span>
+                </button>
+            </div>
+            <div class="share-link">
+                <input type="text" id="shareUrl" readonly 
+                       value="<?= htmlspecialchars("http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]") ?>">
+                <button class="btn btn-primary" id="copyLink">
+                    <i class="fas fa-copy"></i> Salin
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 /* ============================================
-   FAVORITES PAGE STYLES
+   FAVORITES PAGE STYLES - Consistent with Homepage
    ============================================ */
 
-.favorites-section {
+.favorites-page {
     padding: 2rem 0 4rem;
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(78, 205, 196, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(255, 107, 107, 0.02) 100%);
     min-height: 100vh;
 }
 
-/* Header Section */
-.favorites-header {
+/* Hero Header */
+.favorites-hero {
     background: white;
     border-radius: 20px;
     padding: 2.5rem;
@@ -350,87 +348,87 @@ $favorites = getUserFavorites($user_uid, 20);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: wrap;
     gap: 2rem;
 }
 
-.header-content h1 {
-    color: var(--primary);
+.hero-content .hero-title {
     font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
     margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
     gap: 15px;
 }
 
-.header-content h1 i {
+.hero-content .hero-title i {
     color: #ff6b6b;
-    font-size: 2.2rem;
 }
 
-.subtitle {
-    color: var(--gray);
+.hero-subtitle {
     font-size: 1.1rem;
-    margin-bottom: 2rem;
+    color: #666;
+    max-width: 500px;
+    line-height: 1.6;
 }
 
-.user-info {
+.user-profile {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--light-gray);
+    background: rgba(255, 107, 107, 0.05);
+    padding: 1.5rem;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 107, 107, 0.1);
 }
 
-.user-avatar {
+.profile-avatar {
     width: 80px;
     height: 80px;
     border-radius: 50%;
     overflow: hidden;
-    border: 4px solid var(--light);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 4px solid rgba(255, 107, 107, 0.2);
 }
 
-.user-avatar img {
+.profile-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.user-details h3 {
-    font-size: 1.5rem;
+.profile-info h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
     margin-bottom: 0.3rem;
-    color: var(--dark);
 }
 
-.user-details .email {
-    color: var(--gray);
+.profile-email {
+    color: #666;
     font-size: 0.9rem;
     margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.stats {
+.profile-stats {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .stat-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--gray);
+    color: #666;
     font-size: 0.9rem;
 }
 
 .stat-item i {
-    color: var(--primary);
-}
-
-.header-actions {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
+    color: #ff6b6b;
 }
 
 /* Stats Cards */
@@ -438,7 +436,7 @@ $favorites = getUserFavorites($user_uid, 20);
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
 }
 
 .stat-card {
@@ -449,11 +447,13 @@ $favorites = getUserFavorites($user_uid, 20);
     align-items: center;
     gap: 1.5rem;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .stat-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.15);
 }
 
 .stat-icon {
@@ -464,37 +464,21 @@ $favorites = getUserFavorites($user_uid, 20);
     align-items: center;
     justify-content: center;
     font-size: 1.8rem;
-}
-
-.stat-icon.easy {
-    background: rgba(46, 213, 115, 0.1);
-    color: #2ed573;
-}
-
-.stat-icon.medium {
-    background: rgba(255, 165, 2, 0.1);
-    color: #ffa502;
-}
-
-.stat-icon.hard {
-    background: rgba(255, 107, 107, 0.1);
-    color: #ff6b6b;
-}
-
-.stat-icon.total {
-    background: rgba(78, 205, 196, 0.1);
-    color: #4ecdc4;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+    color: white;
 }
 
 .stat-content h3 {
-    font-size: 1.8rem;
+    font-size: 2rem;
+    font-weight: 700;
     margin-bottom: 0.3rem;
-    color: var(--dark);
+    color: #333;
 }
 
 .stat-content p {
-    color: var(--gray);
+    color: #666;
     font-size: 0.9rem;
+    font-weight: 500;
 }
 
 /* Filters Section */
@@ -506,33 +490,35 @@ $favorites = getUserFavorites($user_uid, 20);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
 }
 
-.search-box {
+.favorites-search {
     position: relative;
     margin-bottom: 1.5rem;
 }
 
-.search-box i {
+.favorites-search i {
     position: absolute;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--gray);
+    color: #999;
     font-size: 1.1rem;
 }
 
-.search-box input {
+.favorites-search input {
     width: 100%;
     padding: 15px 20px 15px 50px;
-    border: 2px solid var(--light-gray);
+    border: 2px solid #eee;
     border-radius: 12px;
     font-size: 1rem;
     font-family: 'Poppins', sans-serif;
     transition: all 0.3s ease;
+    background: #f8f9fa;
 }
 
-.search-box input:focus {
+.favorites-search input:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: #ff6b6b;
+    background: white;
     box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
 }
 
@@ -543,51 +529,78 @@ $favorites = getUserFavorites($user_uid, 20);
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: var(--gray);
+    color: #999;
     cursor: pointer;
     display: none;
+    font-size: 1rem;
 }
 
-.search-box input:not(:placeholder-shown) + .clear-search {
+.favorites-search input:not(:placeholder-shown) + .clear-search {
     display: block;
 }
 
-.filter-options {
+.filter-controls {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
-}
-
-.filter-group {
-    display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.filter-group label {
-    color: var(--dark);
-    font-weight: 500;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .filter-select {
-    padding: 10px 15px;
-    border: 2px solid var(--light-gray);
-    border-radius: 8px;
+    padding: 12px 20px;
+    border: 2px solid #eee;
+    border-radius: 10px;
     background: white;
     font-family: 'Poppins', sans-serif;
     font-size: 0.95rem;
-    color: var(--dark);
+    color: #333;
     cursor: pointer;
     transition: all 0.3s ease;
+    flex: 1;
+    min-width: 180px;
 }
 
 .filter-select:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: #ff6b6b;
+}
+
+.favorites-page .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.favorites-page .btn-primary {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+    color: white;
+}
+
+.favorites-page .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+}
+
+.favorites-page .btn-outline {
+    background: white;
+    border: 2px solid #ff6b6b;
+    color: #ff6b6b;
+}
+
+.favorites-page .btn-outline:hover {
+    background: #ff6b6b;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.2);
 }
 
 /* Favorites Grid */
@@ -598,71 +611,46 @@ $favorites = getUserFavorites($user_uid, 20);
     margin-bottom: 3rem;
 }
 
-.favorite-card {
+.recipe-card {
     background: white;
-    border-radius: 20px;
+    border-radius: 15px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     transition: all 0.4s ease;
     position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.favorite-card:hover {
+.recipe-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 40px rgba(255, 107, 107, 0.15);
 }
 
-.remove-favorite {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 36px;
-    height: 36px;
-    background: white;
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1rem;
-    color: #ff6b6b;
-    z-index: 2;
-    opacity: 0;
-    transform: scale(0.8);
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
 
-.favorite-card:hover .remove-favorite {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.remove-favorite:hover {
-    background: #ff6b6b;
-    color: white;
-    transform: scale(1.1) !important;
-}
-
-.favorite-image {
+.recipe-image-container {
     position: relative;
     height: 200px;
     overflow: hidden;
+    display: block;
+    text-decoration: none;
 }
 
-.favorite-image img {
+.recipe-image-container img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.6s ease;
 }
 
-.favorite-card:hover .favorite-image img {
+.recipe-card:hover .recipe-image-container img {
     transform: scale(1.05);
 }
 
-.favorite-overlay {
+.recipe-overlay {
+    display: none;
+}
+
+.quick-view-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -674,15 +662,17 @@ $favorites = getUserFavorites($user_uid, 20);
     justify-content: center;
     opacity: 0;
     transition: opacity 0.3s ease;
+    display: none;
 }
 
-.favorite-card:hover .favorite-overlay {
-    opacity: 1;
+.recipe-card:hover .quick-view-overlay {
+    opacity: 0;
+    pointer-events: none;
 }
 
-.quick-view {
+.quick-view-btn {
     background: white;
-    color: var(--primary);
+    color: #ff6b6b;
     border: none;
     padding: 10px 20px;
     border-radius: 25px;
@@ -692,49 +682,41 @@ $favorites = getUserFavorites($user_uid, 20);
     align-items: center;
     gap: 8px;
     transition: all 0.3s ease;
+    font-size: 0.95rem;
 }
 
-.quick-view:hover {
-    background: var(--primary);
+.quick-view-btn:hover {
+    background: #ff6b6b;
     color: white;
     transform: translateY(-2px);
 }
 
-.favorite-info {
+.recipe-content {
     padding: 1.5rem;
-}
-
-.recipe-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
 }
 
 .recipe-title {
     font-size: 1.3rem;
     font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
     line-height: 1.3;
-    flex: 1;
 }
 
-.favorite-date {
-    font-size: 0.8rem;
-    color: var(--gray);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-    margin-left: 10px;
+.recipe-title a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.recipe-title a:hover {
+    color: #ff6b6b;
 }
 
 .recipe-description {
-    color: var(--gray);
+    color: #666;
     font-size: 0.95rem;
     line-height: 1.5;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -743,34 +725,31 @@ $favorites = getUserFavorites($user_uid, 20);
 
 .recipe-meta {
     display: flex;
-    gap: 1.2rem;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1.2rem;
+}
+
+.meta-info {
+    display: flex;
+    gap: 1rem;
 }
 
 .meta-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    color: var(--gray);
-    font-size: 0.85rem;
-}
-
-.meta-item i {
-    color: var(--primary);
+    color: #666;
     font-size: 0.9rem;
 }
 
-.difficulty-time {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-top: 1.2rem;
-    border-top: 1px solid var(--light-gray);
+.meta-item i {
+    color: #ff6b6b;
+    font-size: 0.9rem;
 }
 
 .difficulty-badge {
-    padding: 6px 15px;
+    padding: 6px 12px;
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -792,28 +771,56 @@ $favorites = getUserFavorites($user_uid, 20);
     color: #ff6b6b;
 }
 
-.time-badge {
-    background: rgba(78, 205, 196, 0.1);
-    color: #4ecdc4;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
 .recipe-actions {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
-.btn-sm {
-    padding: 10px 18px;
-    font-size: 0.9rem;
+.view-btn {
     flex: 1;
+    padding: 10px 15px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.view-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+}
+
+.favorite-btn {
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.favorite-btn.active {
+    color: #ff6b6b;
+}
+
+.favorite-btn:hover {
+    background: rgba(255, 107, 107, 0.1);
 }
 
 /* Empty States */
@@ -824,6 +831,7 @@ $favorites = getUserFavorites($user_uid, 20);
     background: white;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    margin: 2rem 0;
 }
 
 .empty-icon {
@@ -843,17 +851,18 @@ $favorites = getUserFavorites($user_uid, 20);
 .no-favorites h3 {
     font-size: 1.8rem;
     margin-bottom: 1rem;
-    color: var(--dark);
+    color: #333;
 }
 
 .empty-state p,
 .no-favorites p {
-    color: var(--gray);
+    color: #666;
     margin-bottom: 2rem;
     max-width: 400px;
     margin-left: auto;
     margin-right: auto;
     line-height: 1.6;
+    font-size: 1.1rem;
 }
 
 .action-buttons {
@@ -861,6 +870,12 @@ $favorites = getUserFavorites($user_uid, 20);
     gap: 1rem;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* Share Section */
+.share-section {
+    text-align: center;
+    padding: 2rem 0;
 }
 
 /* Modals */
@@ -880,6 +895,12 @@ $favorites = getUserFavorites($user_uid, 20);
 
 .modal.active {
     display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .modal-content {
@@ -889,10 +910,10 @@ $favorites = getUserFavorites($user_uid, 20);
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
-    animation: modalSlideUp 0.3s ease;
+    animation: slideUp 0.3s ease;
 }
 
-@keyframes modalSlideUp {
+@keyframes slideUp {
     from {
         opacity: 0;
         transform: translateY(30px);
@@ -905,7 +926,7 @@ $favorites = getUserFavorites($user_uid, 20);
 
 .modal-header {
     padding: 1.5rem;
-    border-bottom: 1px solid var(--light-gray);
+    border-bottom: 1px solid #eee;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -913,21 +934,23 @@ $favorites = getUserFavorites($user_uid, 20);
 
 .modal-header h3 {
     font-size: 1.5rem;
-    color: var(--dark);
+    color: #333;
+    margin: 0;
 }
 
 .close-modal {
     background: none;
     border: none;
     font-size: 1.8rem;
-    color: var(--gray);
+    color: #999;
     cursor: pointer;
     padding: 5px;
     line-height: 1;
+    transition: color 0.3s ease;
 }
 
 .close-modal:hover {
-    color: var(--primary);
+    color: #ff6b6b;
 }
 
 .modal-body {
@@ -944,7 +967,7 @@ $favorites = getUserFavorites($user_uid, 20);
 
 .share-option {
     background: white;
-    border: 2px solid var(--light-gray);
+    border: 2px solid #eee;
     border-radius: 12px;
     padding: 1.5rem 1rem;
     display: flex;
@@ -956,8 +979,9 @@ $favorites = getUserFavorites($user_uid, 20);
 }
 
 .share-option:hover {
-    border-color: var(--primary);
+    border-color: #ff6b6b;
     transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.1);
 }
 
 .share-option i {
@@ -965,10 +989,15 @@ $favorites = getUserFavorites($user_uid, 20);
     margin-bottom: 5px;
 }
 
-.share-option[data-platform="copy"] i { color: #4ecdc4; }
+.share-option[data-platform="copy"] i { color: #ff6b6b; }
 .share-option[data-platform="whatsapp"] i { color: #25D366; }
 .share-option[data-platform="facebook"] i { color: #1877F2; }
 .share-option[data-platform="twitter"] i { color: #1DA1F2; }
+
+.share-option span {
+    font-weight: 600;
+    color: #333;
+}
 
 .share-link {
     display: flex;
@@ -978,22 +1007,30 @@ $favorites = getUserFavorites($user_uid, 20);
 .share-link input {
     flex: 1;
     padding: 12px 15px;
-    border: 2px solid var(--light-gray);
+    border: 2px solid #eee;
     border-radius: 8px;
     font-family: 'Poppins', sans-serif;
     font-size: 0.9rem;
+    color: #333;
+    background: #f8f9fa;
+}
+
+.share-link input:focus {
+    outline: none;
+    border-color: #ff6b6b;
 }
 
 /* Quick View Modal Content */
 .quick-view-content {
     line-height: 1.6;
+    color: #333;
 }
 
 .quick-view-content h4 {
-    color: var(--dark);
+    color: #333;
     margin: 1.5rem 0 1rem;
     font-size: 1.2rem;
-    border-bottom: 2px solid var(--light-gray);
+    border-bottom: 2px solid #eee;
     padding-bottom: 0.5rem;
 }
 
@@ -1004,38 +1041,35 @@ $favorites = getUserFavorites($user_uid, 20);
 
 .quick-view-content li {
     margin-bottom: 0.5rem;
-    color: var(--gray);
+    color: #555;
 }
 
 /* Responsive Design */
 @media (max-width: 992px) {
-    .favorites-header {
+    .favorites-hero {
         flex-direction: column;
         text-align: center;
     }
     
-    .user-info {
-        justify-content: center;
+    .user-profile {
         flex-direction: column;
         text-align: center;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
     }
     
-    .stats {
+    .profile-stats {
         justify-content: center;
     }
     
-    .filter-options {
+    .filter-controls {
         flex-direction: column;
         align-items: stretch;
     }
     
-    .filter-group {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
     .filter-select {
-        width: 100%;
+        min-width: 100%;
     }
 }
 
@@ -1052,34 +1086,23 @@ $favorites = getUserFavorites($user_uid, 20);
         grid-template-columns: 1fr;
     }
     
-    .header-content h1 {
+    .hero-title {
         font-size: 2rem;
     }
     
-    .recipe-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .favorite-date {
-        margin-left: 0;
+    .modal-content {
+        margin: 1rem;
     }
 }
 
 @media (max-width: 576px) {
-    .favorites-header,
-    .filters-section,
-    .favorite-card {
+    .favorites-hero,
+    .filters-section {
         padding: 1.5rem;
     }
     
     .stats-cards {
         grid-template-columns: 1fr;
-    }
-    
-    .recipe-actions {
-        flex-direction: column;
     }
     
     .action-buttons {
@@ -1089,6 +1112,66 @@ $favorites = getUserFavorites($user_uid, 20);
     .share-link {
         flex-direction: column;
     }
+    
+    .recipe-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .recipe-actions {
+        width: 100%;
+    }
+    
+    .filter-controls .btn {
+        width: 100%;
+    }
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #ff6b6b;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Loading Animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
 }
 </style>
 
@@ -1097,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Elements
     const favoritesGrid = document.getElementById('favoritesGrid');
     const emptyState = document.getElementById('emptyState');
-    const noFavorites = document.getElementById('noFavorites');
+    const noFavorites = document.querySelector('.no-favorites');
     const searchInput = document.getElementById('searchFavorites');
     const clearSearch = document.getElementById('clearSearch');
     const categoryFilter = document.getElementById('categoryFilter');
@@ -1105,8 +1188,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeFilter = document.getElementById('timeFilter');
     const sortBtn = document.getElementById('sortBtn');
     const shareListBtn = document.getElementById('shareListBtn');
-    const removeFavoriteBtns = document.querySelectorAll('.remove-favorite');
-    const quickViewBtns = document.querySelectorAll('.quick-view');
+    const clearAllFilters = document.getElementById('clearAllFilters');
+    const quickViewBtns = document.querySelectorAll('.quick-view-btn');
+    const favoriteBtns = document.querySelectorAll('.favorite-btn');
     const quickViewModal = document.getElementById('quickViewModal');
     const shareModal = document.getElementById('shareModal');
     const closeModalBtns = document.querySelectorAll('.close-modal');
@@ -1121,10 +1205,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hardCount = document.getElementById('hardCount');
     const totalTime = document.getElementById('totalTime');
     
-    // Initialize stats
-    updateStats();
-    
-    // Search functionality
+    // Filter functionality
     searchInput.addEventListener('input', filterFavorites);
     
     clearSearch.addEventListener('click', function() {
@@ -1133,13 +1214,23 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.display = 'none';
     });
     
-    // Filter functionality
     categoryFilter.addEventListener('change', filterFavorites);
     difficultyFilter.addEventListener('change', filterFavorites);
     timeFilter.addEventListener('change', filterFavorites);
     
+    if (clearAllFilters) {
+        clearAllFilters.addEventListener('click', function() {
+            searchInput.value = '';
+            categoryFilter.value = 'all';
+            difficultyFilter.value = 'all';
+            timeFilter.value = 'all';
+            filterFavorites();
+            clearSearch.style.display = 'none';
+        });
+    }
+    
     // Sort functionality
-    sortBtn.addEventListener('click', function() {
+    sortBtn?.addEventListener('click', function() {
         const sortOptions = [
             { text: 'Terbaru Ditambahkan', value: 'newest' },
             { text: 'Terlama Ditambahkan', value: 'oldest' },
@@ -1160,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 10px 0;
             min-width: 200px;
             z-index: 100;
-            display: none;
+            border: 1px solid #eee;
         `;
         
         sortOptions.forEach(option => {
@@ -1177,18 +1268,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 cursor: pointer;
                 font-family: 'Poppins', sans-serif;
                 font-size: 0.95rem;
-                color: var(--dark);
+                color: #333;
                 transition: all 0.2s ease;
             `;
             
             item.addEventListener('mouseenter', () => {
                 item.style.background = 'rgba(255, 107, 107, 0.05)';
-                item.style.color = 'var(--primary)';
+                item.style.color = '#ff6b6b';
             });
             
             item.addEventListener('mouseleave', () => {
                 item.style.background = 'none';
-                item.style.color = 'var(--dark)';
+                item.style.color = '#333';
             });
             
             item.addEventListener('click', () => {
@@ -1203,76 +1294,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const rect = sortBtn.getBoundingClientRect();
         sortMenu.style.top = rect.bottom + 5 + 'px';
         sortMenu.style.left = rect.left + 'px';
-        sortMenu.style.display = 'block';
         
         document.body.appendChild(sortMenu);
         
         // Close menu when clicking outside
-        document.addEventListener('click', function closeMenu(e) {
+        function closeMenu(e) {
             if (!sortMenu.contains(e.target) && e.target !== sortBtn) {
                 sortMenu.remove();
                 document.removeEventListener('click', closeMenu);
             }
-        });
+        }
+        
+        setTimeout(() => document.addEventListener('click', closeMenu), 10);
     });
     
     // Share functionality
-    shareListBtn.addEventListener('click', function() {
+    shareListBtn?.addEventListener('click', function() {
         shareModal.classList.add('active');
-    });
-    
-    // Remove from favorites
-    removeFavoriteBtns.forEach(btn => {
-        btn.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            
-            const recipeId = this.dataset.recipeId;
-            const recipeCard = this.closest('.favorite-card');
-            
-            if (!confirm('Hapus resep dari favorit?')) return;
-            
-            // Show loading on button
-            const originalHTML = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            this.disabled = true;
-            
-            try {
-                // Remove from server
-                const response = await fetch('api/toggle_favorite.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        recipeId: recipeId,
-                        action: 'remove'
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Remove from UI with animation
-                    recipeCard.style.transform = 'scale(0.95)';
-                    recipeCard.style.opacity = '0';
-                    setTimeout(() => {
-                        recipeCard.remove();
-                        updateStats();
-                        checkEmptyState();
-                    }, 300);
-                } else {
-                    alert('Gagal menghapus dari favorit');
-                    this.innerHTML = originalHTML;
-                    this.disabled = false;
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Terjadi kesalahan');
-                this.innerHTML = originalHTML;
-                this.disabled = false;
-            }
-        });
     });
     
     // Quick view
@@ -1285,47 +1323,96 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show loading
             const modalContent = document.getElementById('quickViewContent');
-            modalContent.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>';
+            modalContent.innerHTML = '<div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #ff6b6b;"></i><p>Memuat resep...</p></div>';
             quickViewModal.classList.add('active');
             
             try {
-                // Fetch recipe details
                 const response = await fetch(`api/get_recipe.php?id=${recipeId}`);
                 const recipe = await response.json();
                 
                 if (recipe) {
                     modalContent.innerHTML = `
                         <div class="quick-view-content">
-                            <h4>${recipe.judul}</h4>
-                            <p>${recipe.deskripsi}</p>
+                            <h4>${escapeHTML(recipe.judul)}</h4>
+                            <p>${escapeHTML(recipe.deskripsi || '')}</p>
                             
-                            <h4>📋 Bahan-bahan</h4>
-                            <div style="white-space: pre-line;">${recipe.bahan}</div>
+                            <h4><i class="fas fa-list"></i> Bahan-bahan</h4>
+                            <div style="white-space: pre-line; background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                ${escapeHTML(recipe.bahan || '')}
+                            </div>
                             
-                            <h4>👩‍🍳 Cara Masak</h4>
-                            <div style="white-space: pre-line;">${recipe.cara_masak}</div>
+                            <h4><i class="fas fa-utensils"></i> Cara Masak</h4>
+                            <div style="white-space: pre-line; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                                ${escapeHTML(recipe.cara_masak || '')}
+                            </div>
                             
                             <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">
                                 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                                     <span class="difficulty-badge ${getDifficultyClass(recipe.tingkat_kesulitan)}">
                                         ${recipe.tingkat_kesulitan}
                                     </span>
-                                    <span style="color: var(--gray);">
+                                    <span style="color: #666;">
                                         <i class="fas fa-clock"></i> ${recipe.waktu} menit
                                     </span>
-                                    <span style="color: var(--gray);">
+                                    <span style="color: #666;">
                                         <i class="fas fa-user-friends"></i> ${recipe.porsi} porsi
+                                    </span>
+                                    <span style="color: #666;">
+                                        <i class="fas fa-fire"></i> ${recipe.kategori}
                                     </span>
                                 </div>
                             </div>
                         </div>
                     `;
                 } else {
-                    modalContent.innerHTML = '<p class="error">Gagal memuat resep</p>';
+                    modalContent.innerHTML = '<p style="text-align: center; color: #666;">Gagal memuat resep</p>';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                modalContent.innerHTML = '<p class="error">Terjadi kesalahan</p>';
+                modalContent.innerHTML = '<p style="text-align: center; color: #666;">Terjadi kesalahan</p>';
+            }
+        });
+    });
+    
+    // Favorite toggle in grid
+    favoriteBtns.forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            
+            const recipeId = this.dataset.recipeId;
+            const recipeCard = this.closest('.recipe-card');
+            
+            if (this.classList.contains('active')) {
+                // Already favorited, remove it
+                if (!confirm('Hapus resep dari favorit?')) return;
+                
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                try {
+                    const response = await fetch('api/toggle_favorite.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recipeId: recipeId, action: 'remove' })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Remove card from grid
+                        recipeCard.style.transform = 'scale(0.95)';
+                        recipeCard.style.opacity = '0';
+                        setTimeout(() => {
+                            recipeCard.remove();
+                            updateStats();
+                            checkEmptyState();
+                        }, 300);
+                        
+                        showToast('Resep dihapus dari favorit');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.innerHTML = '<i class="fas fa-heart"></i>';
+                }
             }
         });
     });
@@ -1335,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', function() {
         option.addEventListener('click', function() {
             const platform = this.dataset.platform;
             const url = shareUrlInput.value;
-            const title = 'Daftar Resep Favorit Saya';
+            const title = 'Daftar Resep Favorit Saya - Resep Nusantara';
             
             switch(platform) {
                 case 'copy':
@@ -1343,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showToast('Link berhasil disalin!');
                     break;
                 case 'whatsapp':
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(title + ': ' + url)}`, '_blank');
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');
                     break;
                 case 'facebook':
                     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
@@ -1356,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Copy link button
-    copyLinkBtn.addEventListener('click', function() {
+    copyLinkBtn?.addEventListener('click', function() {
         copyToClipboard(shareUrlInput.value);
         showToast('Link berhasil disalin!');
     });
@@ -1384,7 +1471,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const difficulty = difficultyFilter.value;
         const maxTime = timeFilter.value;
         
-        const cards = document.querySelectorAll('.favorite-card');
+        if (!favoritesGrid) return;
+        
+        const cards = favoritesGrid.querySelectorAll('.recipe-card');
         let visibleCount = 0;
         
         cards.forEach(card => {
@@ -1408,20 +1497,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Add animation
                 card.style.animation = 'none';
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     card.style.animation = 'fadeIn 0.5s ease';
-                }, 10);
+                });
             } else {
                 card.style.display = 'none';
             }
         });
         
         checkEmptyState(visibleCount);
+        clearSearch.style.display = searchTerm ? 'block' : 'none';
     }
     
     function sortFavorites(sortBy) {
-        const container = document.getElementById('favoritesGrid');
-        const cards = Array.from(document.querySelectorAll('.favorite-card'));
+        if (!favoritesGrid) return;
+        
+        const container = favoritesGrid;
+        const cards = Array.from(container.querySelectorAll('.recipe-card'));
         
         cards.sort((a, b) => {
             switch(sortBy) {
@@ -1459,11 +1551,15 @@ document.addEventListener('DOMContentLoaded', function() {
             'time-desc': 'Waktu ↓'
         };
         
-        sortBtn.innerHTML = `<i class="fas fa-sort-amount-down"></i> ${sortText[sortBy]}`;
+        if (sortBtn) {
+            sortBtn.innerHTML = `<i class="fas fa-sort-amount-down"></i> ${sortText[sortBy]}`;
+        }
     }
     
     function updateStats() {
-        const cards = document.querySelectorAll('.favorite-card');
+        if (!favoritesGrid) return;
+        
+        const cards = favoritesGrid.querySelectorAll('.recipe-card');
         let easy = 0, medium = 0, hard = 0, total = 0;
         
         cards.forEach(card => {
@@ -1479,46 +1575,47 @@ document.addEventListener('DOMContentLoaded', function() {
             total += time;
         });
         
-        // Animate numbers
-        animateNumber(easyCount, easy);
-        animateNumber(mediumCount, medium);
-        animateNumber(hardCount, hard);
+        // Update stats
+        if (easyCount) animateNumber(easyCount, easy);
+        if (mediumCount) animateNumber(mediumCount, medium);
+        if (hardCount) animateNumber(hardCount, hard);
+        if (favoriteCount) favoriteCount.textContent = cards.length;
         
         // Format total time
-        const hours = Math.floor(total / 60);
-        const minutes = total % 60;
-        let timeText = '';
-        
-        if (hours > 0) {
-            timeText += `${hours} jam `;
+        if (totalTime) {
+            const hours = Math.floor(total / 60);
+            const minutes = total % 60;
+            let timeText = '';
+            
+            if (hours > 0) {
+                timeText += `${hours}j `;
+            }
+            if (minutes > 0 || hours === 0) {
+                timeText += `${minutes}m`;
+            }
+            
+            totalTime.textContent = timeText.trim();
         }
-        if (minutes > 0 || hours === 0) {
-            timeText += `${minutes} menit`;
-        }
-        
-        totalTime.textContent = timeText.trim();
-        favoriteCount.textContent = cards.length;
     }
     
     function checkEmptyState(visibleCount = null) {
-        const cards = document.querySelectorAll('.favorite-card');
-        const totalCards = cards.length;
-        const visibleCards = visibleCount !== null ? visibleCount : cards.length;
+        if (!favoritesGrid) return;
         
-        if (totalCards === 0) {
-            noFavorites.style.display = 'block';
-            emptyState.style.display = 'none';
-        } else if (visibleCards === 0) {
-            noFavorites.style.display = 'none';
-            emptyState.style.display = 'block';
-        } else {
-            noFavorites.style.display = 'none';
-            emptyState.style.display = 'none';
+        const cards = favoritesGrid.querySelectorAll('.recipe-card');
+        const totalCards = cards.length;
+        const visibleCards = visibleCount !== null ? visibleCount : Array.from(cards).filter(c => c.style.display !== 'none').length;
+        
+        if (emptyState) {
+            emptyState.style.display = (totalCards > 0 && visibleCards === 0) ? 'block' : 'none';
         }
     }
     
     function animateNumber(element, target) {
+        if (!element) return;
+        
         const current = parseInt(element.textContent) || 0;
+        if (current === target) return;
+        
         const diff = target - current;
         const steps = 20;
         const increment = diff / steps;
@@ -1563,18 +1660,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--primary);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-        `;
         
         document.body.appendChild(toast);
         
@@ -1584,119 +1669,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
     
-    // Add to cart functionality (placeholder)
-    document.querySelectorAll('.add-to-cart').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const recipeId = this.dataset.recipeId;
-            alert('Fitur daftar belanja akan tersedia segera!');
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+    
+    // Initialize
+    checkEmptyState();
+    
+    // Listen for favorite changes from other pages
+    document.addEventListener('favorite:changed', function(e) {
+        const { recipeId, favorited } = e.detail;
+        
+        // Update favorite button if it exists
+        document.querySelectorAll(`.favorite-btn[data-recipe-id="${recipeId}"]`).forEach(btn => {
+            if (favorited) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-heart"></i>';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="far fa-heart"></i>';
+            }
         });
+        
+        // If a card was unfavorited and we're on favorites page, remove it
+        if (!favorited && favoritesGrid) {
+            const card = favoritesGrid.querySelector(`[data-id="${recipeId}"]`);
+            if (card) {
+                card.style.transform = 'scale(0.95)';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    updateStats();
+                    checkEmptyState();
+                }, 300);
+            }
+        }
     });
     
-    // Initial check
-    checkEmptyState();
-
-    // Refresh favorites list (can be triggered after a favorite is changed elsewhere)
-    async function refreshFavorites(limit = 50) {
-        if (!document.querySelector('.favorites-container')) return;
-        try {
-            const res = await fetch('api/get_favorites.php?limit=' + encodeURIComponent(limit));
-            const data = await res.json();
-            if (!data.success) return;
-
-            let grid = document.getElementById('favoritesGrid');
-            const container = document.querySelector('.favorites-container');
-            const noFav = document.getElementById('noFavorites');
-            const emptyStateEl = document.getElementById('emptyState');
-
-            if (!grid) {
-                grid = document.createElement('div');
-                grid.className = 'favorites-grid';
-                grid.id = 'favoritesGrid';
-                // Insert at top of container
-                container.insertBefore(grid, container.firstChild);
-            }
-
-            grid.innerHTML = '';
-
-            if (data.count === 0) {
-                if (noFav) noFav.style.display = 'block';
-                if (emptyStateEl) emptyStateEl.style.display = 'none';
-                updateStats();
-                return;
-            }
-
-            data.favorites.forEach(recipe => {
-                const card = document.createElement('div');
-                card.className = 'favorite-card';
-                card.dataset.category = recipe.kategori || 'all';
-                card.dataset.difficulty = (recipe.tingkat_kesulitan || 'sedang');
-                card.dataset.time = recipe.waktu || 0;
-
-                card.innerHTML = `
-                    <button class="remove-favorite" data-recipe-id="${recipe.id}"><i class="fas fa-times"></i></button>
-                    <div class="favorite-image">
-                        <img src="${recipe.image_url || 'assets/images/default-recipe.jpg'}" alt="${escapeHTML(recipe.judul)}">
-                    </div>
-                    <div class="favorite-info">
-                        <div class="recipe-header">
-                            <div class="recipe-title">${escapeHTML(recipe.judul)}</div>
-                            <div class="favorite-date">${recipe.waktu} menit</div>
-                        </div>
-                        <p class="recipe-description">${escapeHTML(recipe.excerpt || '')}</p>
-                        <div class="recipe-actions">
-                            <a href="?page=resep&id=${recipe.id}" class="btn btn-outline btn-sm">Lihat</a>
-                            <button class="btn btn-primary btn-sm quick-view" data-recipe-id="${recipe.id}">Quick View</button>
-                        </div>
-                    </div>
-                `;
-
-                grid.appendChild(card);
+    // Handle escape key for modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
             });
-
-            // Attach remove handlers
-            document.querySelectorAll('.remove-favorite').forEach(btn => {
-                btn.addEventListener('click', async function(e) {
-                    e.stopPropagation();
-                    if (!confirm('Hapus resep dari favorit?')) return;
-                    const recipeId = this.dataset.recipeId;
-                    try {
-                        const res = await fetch('api/toggle_favorite.php', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ recipeId: recipeId, action: 'remove' })
-                        });
-                        const result = await res.json();
-                        if (result.success) {
-                            showToast('Resep dihapus dari favorit');
-                            refreshFavorites(limit);
-                        } else {
-                            alert('Gagal menghapus favorit');
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        alert('Terjadi kesalahan');
-                    }
-                });
-            });
-
-            updateStats();
-            checkEmptyState();
-        } catch (err) {
-            console.error('Failed to refresh favorites:', err);
         }
-    }
-
-    // Small helper
-    function escapeHTML(str) {
-        return String(str).replace(/[&<>"]/g, function (s) {
-            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[s];
-        });
-    }
-
-    // Listen for favorite changes across pages
-    document.addEventListener('favorite:changed', function(e) {
-        refreshFavorites();
     });
-
 });
 </script>
