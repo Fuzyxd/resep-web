@@ -3,18 +3,7 @@
 
     // Get recipes for different sections (use image-aware helpers)
     $featuredRecipes = getRecipesWithImages(6, 0);
-    $trendingRecipes = getRecipesWithImages(6, 6);
-    $categories = [
-        ['name' => 'Makanan Berat', 'icon' => 'fas fa-utensils', 'count' => 12],
-        ['name' => 'Makanan Ringan', 'icon' => 'fas fa-cookie-bite', 'count' => 8],
-        ['name' => 'Kue & Roti', 'icon' => 'fas fa-birthday-cake', 'count' => 15],
-        ['name' => 'Minuman', 'icon' => 'fas fa-glass-whiskey', 'count' => 10],
-        ['name' => 'Sarapan', 'icon' => 'fas fa-egg', 'count' => 7],
-        ['name' => 'Makanan Penutup', 'icon' => 'fas fa-ice-cream', 'count' => 9],
-        ['name' => 'Makanan Sehat', 'icon' => 'fas fa-heartbeat', 'count' => 11],
-        ['name' => 'Cepat Saji', 'icon' => 'fas fa-hamburger', 'count' => 5]
-    ];
-
+    
     // Get stats (in real app, these would come from database)
     $totalRecipes = 156;
     $totalUsers = 2345;
@@ -57,77 +46,6 @@
                         <span class="stat-label">Resep Dicoba</span>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="features-section">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Kenapa Memilih Kami?</h2>
-                <p class="section-subtitle">
-                    Platform resep terlengkap dengan fitur-fitur terbaik untuk pengalaman memasak yang menyenangkan
-                </p>
-            </div>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-book-open"></i>
-                    </div>
-                    <h3>Resep Teruji</h3>
-                    <p>Semua resep telah diuji oleh chef profesional untuk memastikan hasil yang sempurna</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <h3>Waktu Masak</h3>
-                    <p>Estimasi waktu masak yang akurat untuk membantu Anda merencanakan waktu dengan baik</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <h3>Favoritkan Resep</h3>
-                    <p>Simpan resep favorit Anda untuk akses cepat dan mudah kapan saja</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <h3>Mobile Friendly</h3>
-                    <p>Akses resep dari smartphone atau tablet dengan tampilan yang optimal</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Categories Section -->
-    <section class="categories-section">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Jelajahi Kategori</h2>
-                <p class="section-subtitle">
-                    Temukan resep berdasarkan kategori favorit Anda
-                </p>
-            </div>
-            
-            <div class="categories-grid" id="categoriesGrid">
-                <?php foreach ($categories as $category): ?>
-                    <div class="category-card" 
-                        data-category="<?= strtolower(str_replace(' ', '-', $category['name'])) ?>">
-                        <div class="category-icon">
-                            <i class="<?= $category['icon'] ?>"></i>
-                        </div>
-                        <h3><?= htmlspecialchars($category['name']) ?></h3>
-                        <div class="category-count"><?= $category['count'] ?> Resep</div>
-                    </div>
-                <?php endforeach; ?>
             </div>
         </div>
     </section>
@@ -246,95 +164,12 @@
         </div>
     </section>
 
-    <!-- Trending Recipes -->
-    <section class="trending-section">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Sedang Tren</h2>
-                <p class="section-subtitle">
-                    Resep yang sedang populer di kalangan pengguna
-                </p>
-            </div>
-            
-            <div class="recipe-grid" id="trendingGrid">
-                <?php foreach ($trendingRecipes as $recipe): 
-                    $difficultyClass = '';
-                    switch(strtolower($recipe['tingkat_kesulitan'])) {
-                        case 'mudah': $difficultyClass = 'difficulty-easy'; break;
-                        case 'sedang': $difficultyClass = 'difficulty-medium'; break;
-                        case 'sulit': $difficultyClass = 'difficulty-hard'; break;
-                    }
-                ?>
-                    <div class="recipe-card" 
-                        data-category="<?= strtolower($recipe['kategori'] ?? 'lainnya') ?>">
-                        
-                        <div class="recipe-image-container">
-                                <img src="<?= htmlspecialchars($recipe['image_url']) ?>" 
-                                    alt="<?= htmlspecialchars($recipe['judul']) ?>" 
-                                    class="recipe-image"
-                                    loading="lazy">
-                        </div>
-                        
-                        <div class="recipe-content">
-                            <h3 class="recipe-title"><?= htmlspecialchars($recipe['judul']) ?></h3>
-                            <p class="recipe-description">
-                                <?= htmlspecialchars(substr($recipe['deskripsi'], 0, 120)) ?>
-                                <?= strlen($recipe['deskripsi']) > 120 ? '...' : '' ?>
-                            </p>
-                            
-                            <div class="recipe-meta">
-                                <div class="recipe-info">
-                                    <div class="recipe-info-item">
-                                        <i class="fas fa-clock"></i>
-                                        <span><?= ($recipe['waktu'] ?? 0) ?> mnt</span>
-                                    </div>
-                                    <div class="recipe-info-item">
-                                        <i class="fas fa-fire"></i>
-                                        <span>32x Dicoba</span>
-                                    </div>
-                                </div>
-                                
-                                <span class="difficulty-badge <?= $difficultyClass ?>">
-                                    <?= ucfirst($recipe['tingkat_kesulitan']) ?>
-                                </span>
-                            </div>
-                            
-                            <div class="recipe-meta">
-                                <div class="recipe-actions">
-                                    <?php $is_fav = isset($_SESSION['user']) ? isFavorited($_SESSION['user']['uid'], $recipe['id']) : false; ?>
-                                    <button class="favorite-btn <?= $is_fav ? 'active' : '' ?>" data-recipe-id="<?= $recipe['id'] ?>">
-                                        <i class="<?= $is_fav ? 'fas' : 'far' ?> fa-heart"></i>
-                                        <span class="tooltip"><?= $is_fav ? 'Hapus dari Favorit' : 'Tambahkan ke Favorit' ?></span>
-                                    </button>
-                                    
-                                    <a href="?page=resep&id=<?= $recipe['id'] ?>" class="view-btn">
-                                        <i class="fas fa-eye"></i> Lihat Resep
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <div class="load-more-section">
-                <button class="load-more-btn" id="loadMore">
-                    <i class="fas fa-plus"></i> Muat Lebih Banyak Resep
-                </button>
-            </div>
-        </div>
-    </section>
-
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Elements
         const heroSearch = document.getElementById('heroSearch');
         const heroSearchBtn = document.getElementById('heroSearchBtn');
-        const categoriesGrid = document.getElementById('categoriesGrid');
-        const categoryCards = document.querySelectorAll('.category-card');
-        const recipeCards = document.querySelectorAll('.recipe-card');
         const favoriteBtns = document.querySelectorAll('.favorite-btn');
-        const loadMoreBtn = document.getElementById('loadMore');
         const ctaExplore = document.getElementById('ctaExplore');
         const ctaRegister = document.getElementById('ctaRegister');
         
@@ -382,36 +217,6 @@
         heroSearchBtn.addEventListener('click', performSearch);
         heroSearch.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch();
-        });
-        
-        // Category filtering
-        categoryCards.forEach(card => {
-            card.addEventListener('click', function() {
-                // Remove active class from all cards
-                categoryCards.forEach(c => c.classList.remove('active'));
-                
-                // Add active class to clicked card
-                this.classList.add('active');
-                
-                const category = this.dataset.category;
-                
-                // Show all cards if 'all' category
-                if (category === 'all') {
-                    recipeCards.forEach(card => {
-                        card.style.display = 'block';
-                    });
-                    return;
-                }
-                
-                // Filter recipes
-                recipeCards.forEach(card => {
-                    if (card.dataset.category === category) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
         });
         
         // Favorite functionality
@@ -481,8 +286,7 @@
                             this.removeEventListener('animationend', handler);
                         });
 
-                        // Optionally refresh favorits list if present (e.g., favorits page open)
-                        // We'll trigger a custom event so other scripts can handle updating
+                        // Optionally refresh favorits list if present
                         document.dispatchEvent(new CustomEvent('favorite:changed', {
                             detail: { recipeId: recipeId, favorited: favorited }
                         }));
@@ -501,131 +305,14 @@
             });
         });
         
-        // Load more functionality
-        let currentPage = 1;
-        let isLoading = false;
-        
-        loadMoreBtn?.addEventListener('click', async function() {
-            if (isLoading) return;
-            
-            isLoading = true;
-            currentPage++;
-            
-            // Show loading state
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
-            this.disabled = true;
-            
-            try {
-                const response = await fetch(`api/get_recipes.php?page=${currentPage}&limit=3`);
-                const recipes = await response.json();
-                
-                if (recipes.length > 0) {
-                    // Add new recipes to grid
-                    const grid = document.getElementById('trendingGrid');
-                    recipes.forEach(recipe => {
-                        const card = createRecipeCard(recipe);
-                        grid.appendChild(card);
-                    });
-                    
-                    // Re-attach event listeners to new favorite buttons
-                    document.querySelectorAll('.recipe-card .favorite-btn').forEach(btn => {
-                        btn.addEventListener('click', handleFavoriteClick);
-                    });
-                } else {
-                    // No more recipes
-                    this.innerHTML = '<i class="fas fa-check"></i> Semua resep telah dimuat';
-                    this.style.opacity = '0.6';
-                    this.style.cursor = 'default';
-                    return;
-                }
-            } catch (error) {
-                console.error('Error loading recipes:', error);
-                alert('Gagal memuat resep. Silakan coba lagi.');
-            } finally {
-                // Reset button state
-                this.innerHTML = originalText;
-                this.disabled = false;
-                isLoading = false;
-            }
-        });
-        
         // CTA buttons
         ctaExplore?.addEventListener('click', () => {
-            window.scrollTo({
-                top: document.querySelector('.categories-section').offsetTop - 100,
-                behavior: 'smooth'
-            });
+            window.location.href = '?page=all_resep';
         });
         
         ctaRegister?.addEventListener('click', () => {
             window.location.href = '?page=register';
         });
-        
-        // Hover effects for recipe cards
-        recipeCards.forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.zIndex = '10';
-            });
-            
-            card.addEventListener('mouseleave', function() {
-                this.style.zIndex = '';
-            });
-        });
-        
-        // Handle favorite button click (for dynamically added cards)
-        function handleFavoriteClick(e) {
-            e.stopPropagation();
-            
-            const recipeId = this.dataset.recipeId;
-            const heartIcon = this.querySelector('i');
-            
-            <?php if (!isset($_SESSION['user'])): ?>
-                alert('Silakan login terlebih dahulu untuk menambahkan ke favorit!');
-                window.location.href = '?page=login';
-                return;
-            <?php endif; ?>
-            
-            // Toggle favorite state
-            this.classList.toggle('active');
-            heartIcon.classList.toggle('far');
-            heartIcon.classList.toggle('fas');
-            
-            // Add animation via class
-            this.classList.remove('animate-heart');
-            void this.offsetWidth;
-            this.classList.add('animate-heart');
-            this.addEventListener('animationend', function handler() {
-                this.classList.remove('animate-heart');
-                this.removeEventListener('animationend', handler);
-            });
-            
-            // Send to server
-            toggleFavoriteOnServer(recipeId, this.classList.contains('active'));
-        }
-        
-        async function toggleFavoriteOnServer(recipeId, isFavorite) {
-            try {
-                const response = await fetch('api/toggle_favorite.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        recipeId: recipeId,
-                        action: isFavorite ? 'add' : 'remove'
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (!result.success) {
-                    console.error('Failed to update favorite:', result.error);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
         
         // Create recipe card element
         function createRecipeCard(recipe) {
@@ -657,8 +344,8 @@
                                 <span>${recipe.waktu} mnt</span>
                             </div>
                             <div class="recipe-info-item">
-                                <i class="fas fa-fire"></i>
-                                <span>${Math.floor(Math.random() * 50) + 1}x Dicoba</span>
+                                <i class="fas fa-user-friends"></i>
+                                <span>${recipe.porsi} porsi</span>
                             </div>
                         </div>
                         
@@ -729,7 +416,7 @@
         }, observerOptions);
         
         // Observe elements for animation
-        document.querySelectorAll('.feature-card, .category-card, .recipe-card').forEach(el => {
+        document.querySelectorAll('.recipe-card').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';

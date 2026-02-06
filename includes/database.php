@@ -57,6 +57,117 @@ function getRecipesByCategory($category, $limit = 10) {
     return $stmt->get_result();
 }
 
+function getFilteredRecipes($sql, $params = [], $types = "") {
+    global $conn;
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
+    if (!empty($types) && !empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $recipes = [];
+    while ($row = $result->fetch_assoc()) {
+        if (empty($row['gambar_url'])) {
+            $row['gambar_url'] = getRecipeImage($row);
+        }
+        $recipes[] = $row;
+    }
+    return $recipes;
+}
+
+function getUniqueCategories() {
+    global $conn;
+    $categories = [];
+    $sql = "SELECT DISTINCT kategori FROM resep WHERE kategori IS NOT NULL AND kategori <> '' ORDER BY kategori ASC";
+    $result = $conn->query($sql);
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $categories[] = $row['kategori'];
+        }
+    }
+    return $categories;
+}
+
+function getFeaturedRecipes($limit = 3) {
+    global $conn;
+    $sql = "SELECT * FROM resep ORDER BY created_at DESC LIMIT ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $recipes = [];
+    while ($row = $result->fetch_assoc()) {
+        if (empty($row['gambar_url'])) {
+            $row['gambar_url'] = getRecipeImage($row);
+        }
+        $recipes[] = $row;
+    }
+    return $recipes;
+}
+
+function getTotalRecipesCount() {
+    global $conn;
+    $result = $conn->query("SELECT COUNT(*) as total FROM resep");
+    if ($result && ($row = $result->fetch_assoc())) {
+        return (int)$row['total'];
+    }
+    return 0;
+}
+
+function getRecipeCountByCategory($category) {
+    global $conn;
+    $sql = "SELECT COUNT(*) as total FROM resep WHERE kategori = ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return 0;
+    $stmt->bind_param("s", $category);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && ($row = $result->fetch_assoc())) {
+        return (int)$row['total'];
+    }
+    return 0;
+}
+
+function getRecipeCountByDifficulty($difficulty) {
+    global $conn;
+    $sql = "SELECT COUNT(*) as total FROM resep WHERE tingkat_kesulitan = ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return 0;
+    $stmt->bind_param("s", $difficulty);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && ($row = $result->fetch_assoc())) {
+        return (int)$row['total'];
+    }
+    return 0;
+}
+
+function getRecipeCountByTime($timeKey) {
+    global $conn;
+    switch ($timeKey) {
+        case 'cepat':
+            $sql = "SELECT COUNT(*) as total FROM resep WHERE waktu <= 30";
+            break;
+        case 'sedang':
+            $sql = "SELECT COUNT(*) as total FROM resep WHERE waktu > 30 AND waktu <= 60";
+            break;
+        case 'lama':
+            $sql = "SELECT COUNT(*) as total FROM resep WHERE waktu > 60";
+            break;
+        default:
+            return 0;
+    }
+    $result = $conn->query($sql);
+    if ($result && ($row = $result->fetch_assoc())) {
+        return (int)$row['total'];
+    }
+    return 0;
+}
+
 function detectFavoritUserColumn() {
     global $conn;
     static $cached = null;

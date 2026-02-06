@@ -13,15 +13,16 @@ $current_user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
         <div class="navbar-menu">
             <ul class="navbar-nav">
                 <li><a href="?page=home" class="<?= ($_GET['page'] ?? 'home') == 'home' ? 'active' : '' ?>">
-                    <i class="fas fa-home"></i> Beranda
+                    <i class="fas fa-home"></i> Home
+                </a></li>
+
+                <li><a href="?page=all_resep" class="<?= ($_GET['page'] ?? '') == 'all_resep' ? 'active' : '' ?>">
+                    <i class="fas fa-book-open"></i> Resep
                 </a></li>
                 
                 <?php if ($current_user): ?>
                 <li><a href="?page=favorit" class="<?= ($_GET['page'] ?? '') == 'favorit' ? 'active' : '' ?>">
                     <i class="fas fa-heart"></i> Favorit
-                </a></li>
-                <li><a href="?page=profile" class="<?= ($_GET['page'] ?? '') == 'profile' ? 'active' : '' ?>">
-                    <i class="fas fa-user"></i> Profil
                 </a></li>
                 <?php endif; ?>
                 

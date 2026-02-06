@@ -6,7 +6,7 @@
 .hero-section {
     position: relative;
     background: linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(78, 205, 196, 0.15) 100%);
-    padding: 8rem 0 6rem;
+    padding: 5rem 0 4rem;
     overflow: hidden;
 }
 
@@ -37,7 +37,7 @@
     font-size: 3.8rem;
     font-weight: 800;
     line-height: 1.1;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -49,7 +49,7 @@
     font-size: 1.3rem;
     color: var(--dark);
     opacity: 0.8;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
@@ -59,7 +59,7 @@
 
 .hero-search-container {
     max-width: 650px;
-    margin: 0 auto 2rem;
+    margin: 0 auto 1.5rem;
     position: relative;
     animation: fadeInUp 0.8s ease-out 0.4s both;
 }
@@ -117,7 +117,7 @@
     display: flex;
     justify-content: center;
     gap: 4rem;
-    margin-top: 4rem;
+    margin-top: 3rem;
     animation: fadeInUp 0.8s ease-out 0.6s both;
 }
 
@@ -666,7 +666,7 @@
 
 @media (max-width: 768px) {
     .hero-section {
-        padding: 6rem 0 4rem;
+        padding: 4rem 0 3rem;
     }
     
     .hero-title {
