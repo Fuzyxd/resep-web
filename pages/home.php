@@ -83,15 +83,15 @@
                             </div>
                         <?php endif; ?>
                         
-                        <div class="recipe-image-container">
-                                <img src="<?= htmlspecialchars($recipe['image_url']) ?>" 
-                                    alt="<?= htmlspecialchars($recipe['judul']) ?>" 
-                                    class="recipe-image"
-                                    loading="lazy">
+                        <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>">
+                            <img src="<?= htmlspecialchars($recipe['image_url']) ?>" 
+                                alt="<?= htmlspecialchars($recipe['judul']) ?>" 
+                                class="recipe-image"
+                                loading="lazy">
                             <div class="recipe-overlay">
                                 <div class="recipe-time"><?= ($recipe['waktu'] ?? 0) ?> menit</div>
                             </div>
-                        </div>
+                        </a>
                         
                         <div class="recipe-content">
                             <h3 class="recipe-title"><?= htmlspecialchars($recipe['judul']) ?></h3>
@@ -100,7 +100,7 @@
                                 <?= strlen($recipe['deskripsi']) > 120 ? '...' : '' ?>
                             </p>
                             
-                            <div class="recipe-meta">
+                            <div class="recipe-meta actions-row">
                                 <div class="recipe-info">
                                     <div class="recipe-info-item">
                                         <i class="fas fa-clock"></i>
@@ -119,17 +119,16 @@
                             
                             <div class="recipe-meta">
                                 <div class="recipe-actions">
-                                    <button class="favorite-btn" 
-                                            data-recipe-id="<?= $recipe['id'] ?>"
-                                            data-tooltip="Tambahkan ke Favorit">
-                                        <i class="far fa-heart"></i>
-                                        <span class="tooltip">Tambahkan ke Favorit</span>
-                                    </button>
-                                    
                                     <a href="?page=resep&id=<?= $recipe['id'] ?>" 
                                     class="view-btn">
                                         <i class="fas fa-eye"></i> Lihat Resep
                                     </a>
+
+                                    <?php $is_fav = isset($_SESSION['user']) ? isFavorited($_SESSION['user']['uid'], $recipe['id']) : false; ?>
+                                    <button class="favorite-btn <?= $is_fav ? 'active' : '' ?>"
+                                            data-recipe-id="<?= $recipe['id'] ?>">
+                                        <i class="<?= $is_fav ? 'fas' : 'far' ?> fa-heart"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -220,73 +219,55 @@
         });
         
         // Favorite functionality
+        function updateFavoriteButton(btn, favorited) {
+            const heartIcon = btn.querySelector('i');
+            btn.classList.toggle('active', favorited);
+            if (favorited) {
+                heartIcon.classList.remove('far');
+                heartIcon.classList.add('fas');
+                btn.setAttribute('data-tooltip', 'Hapus dari Favorit');
+            } else {
+                heartIcon.classList.remove('fas');
+                heartIcon.classList.add('far');
+                btn.setAttribute('data-tooltip', 'Tambahkan ke Favorit');
+            }
+        }
+
         favoriteBtns.forEach(btn => {
             btn.addEventListener('click', async function(e) {
                 e.stopPropagation();
-                
+
+                const isLoggedIn = <?= isset($_SESSION['user']) ? 'true' : 'false' ?>;
+                if (!isLoggedIn) {
+                    alert('Silakan login terlebih dahulu untuk menambahkan ke favorit!');
+                    return;
+                }
+
                 const recipeId = this.dataset.recipeId;
                 const heartIcon = this.querySelector('i');
                 const tooltip = this.querySelector('.tooltip');
-                
-                // Check if user is logged in
-                <?php if (!isset($_SESSION['user'])): ?>
-                    alert('Silakan login terlebih dahulu untuk menambahkan ke favorit!');
-                    window.location.href = '?page=login';
-                    return;
-                <?php endif; ?>
 
-                // Disable button temporarily
                 this.disabled = true;
                 const originalCursor = this.style.cursor;
                 this.style.cursor = 'wait';
 
-                // Determine desired action based on current state
-                const wantsToAdd = !this.classList.contains('active');
-
-                // Show brief loading state
-                const originalInner = this.innerHTML;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
                 try {
                     const response = await fetch('api/toggle_favorite.php', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            recipeId: recipeId,
-                            action: wantsToAdd ? 'add' : 'remove'
-                        })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recipeId: recipeId })
                     });
-
                     const result = await response.json();
 
                     if (result.success) {
                         const favorited = !!result.favorited;
+                        updateFavoriteButton(this, favorited);
 
-                        // Update UI based on server truth
-                        if (favorited) {
-                            this.classList.add('active');
-                            heartIcon.classList.remove('far');
-                            heartIcon.classList.add('fas');
-                            if (tooltip) tooltip.textContent = 'Hapus dari Favorit';
-                        } else {
-                            this.classList.remove('active');
-                            heartIcon.classList.remove('fas');
-                            heartIcon.classList.add('far');
-                            if (tooltip) tooltip.textContent = 'Tambahkan ke Favorit';
-                        }
-
-                        // Add animation via class
                         this.classList.remove('animate-heart');
                         void this.offsetWidth;
                         this.classList.add('animate-heart');
-                        this.addEventListener('animationend', function handler() {
-                            this.classList.remove('animate-heart');
-                            this.removeEventListener('animationend', handler);
-                        });
+                        setTimeout(() => this.classList.remove('animate-heart'), 600);
 
-                        // Optionally refresh favorits list if present
                         document.dispatchEvent(new CustomEvent('favorite:changed', {
                             detail: { recipeId: recipeId, favorited: favorited }
                         }));
@@ -297,11 +278,17 @@
                     console.error('Error:', error);
                     alert('Gagal memperbarui favorit. Silakan coba lagi.');
                 } finally {
-                    // Restore button
                     this.disabled = false;
                     this.style.cursor = originalCursor;
-                    this.innerHTML = originalInner;
                 }
+            });
+        });
+
+        // Keep all buttons in sync within the page
+        document.addEventListener('favorite:changed', function(e) {
+            const { recipeId, favorited } = e.detail;
+            document.querySelectorAll(`.favorite-btn[data-recipe-id="${recipeId}"]`).forEach(btn => {
+                updateFavoriteButton(btn, favorited);
             });
         });
         
@@ -324,12 +311,15 @@
             card.dataset.difficulty = recipe.tingkat_kesulitan;
             
             card.innerHTML = `
-                <div class="recipe-image-container">
+                <a class="recipe-image-container" href="?page=resep&id=${recipe.id}">
                     <img src="${recipe.image_url || 'assets/images/default-recipe.jpg'}" 
                         alt="${recipe.judul}" 
                         class="recipe-image"
                         loading="lazy" onerror="this.onerror=null;this.src='assets/images/default-recipe.jpg';">
-                </div>
+                    <div class="recipe-overlay">
+                        <div class="recipe-time">${recipe.waktu || 0} menit</div>
+                    </div>
+                </a>
                 
                 <div class="recipe-content">
                     <h3 class="recipe-title">${recipe.judul}</h3>
@@ -356,14 +346,13 @@
                     
                     <div class="recipe-meta">
                         <div class="recipe-actions">
-                            <button class="favorite-btn" data-recipe-id="${recipe.id}">
-                                <i class="far fa-heart"></i>
-                                <span class="tooltip">Tambahkan ke Favorit</span>
-                            </button>
-                            
                             <a href="?page=resep&id=${recipe.id}" class="view-btn">
                                 <i class="fas fa-eye"></i> Lihat Resep
                             </a>
+                            
+                            <button class="favorite-btn" data-recipe-id="${recipe.id}">
+                                <i class="far fa-heart"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -381,24 +370,7 @@
             }
         }
         
-        // Initialize tooltips
-        favoriteBtns.forEach(btn => {
-            btn.addEventListener('mouseenter', function() {
-                const tooltip = this.querySelector('.tooltip');
-                if (tooltip) {
-                    tooltip.style.opacity = '1';
-                    tooltip.style.visibility = 'visible';
-                }
-            });
-            
-            btn.addEventListener('mouseleave', function() {
-                const tooltip = this.querySelector('.tooltip');
-                if (tooltip) {
-                    tooltip.style.opacity = '0';
-                    tooltip.style.visibility = 'hidden';
-                }
-            });
-        });
+        // Tooltips disabled per request
         
         // Add scroll animation
         const observerOptions = {

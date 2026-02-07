@@ -647,7 +647,16 @@ if ($favorites->num_rows > 0) {
 }
 
 .recipe-overlay {
-    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 15px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    color: #fff;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .quick-view-overlay {
@@ -665,9 +674,8 @@ if ($favorites->num_rows > 0) {
     display: none;
 }
 
-.recipe-card:hover .quick-view-overlay {
-    opacity: 0;
-    pointer-events: none;
+.recipe-card:hover .recipe-overlay {
+    opacity: 1;
 }
 
 .quick-view-btn {
@@ -1384,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (this.classList.contains('active')) {
                 // Already favorited, remove it
-                if (!confirm('Hapus resep dari favorit?')) return;
+                // Remove without confirmation popup
                 
                 this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 
@@ -1407,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             checkEmptyState();
                         }, 300);
                         
-                        showToast('Resep dihapus dari favorit');
+                        // Toast removed per request
                     }
                 } catch (error) {
                     console.error('Error:', error);
@@ -1467,8 +1475,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Functions
     function filterFavorites() {
         const searchTerm = searchInput.value.toLowerCase();
-        const category = categoryFilter.value;
-        const difficulty = difficultyFilter.value;
+        const category = categoryFilter.value.toLowerCase();
+        const difficulty = difficultyFilter.value.toLowerCase();
         const maxTime = timeFilter.value;
         
         if (!favoritesGrid) return;
@@ -1479,8 +1487,8 @@ document.addEventListener('DOMContentLoaded', function() {
         cards.forEach(card => {
             const title = card.querySelector('.recipe-title').textContent.toLowerCase();
             const desc = card.querySelector('.recipe-description').textContent.toLowerCase();
-            const cardCategory = card.dataset.category;
-            const cardDifficulty = card.dataset.difficulty;
+            const cardCategory = (card.dataset.category || '').toLowerCase().trim();
+            const cardDifficulty = (card.dataset.difficulty || '').toLowerCase().trim();
             const cardTime = parseInt(card.dataset.time);
             
             const matchesSearch = !searchTerm || 

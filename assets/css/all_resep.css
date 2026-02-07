@@ -243,3 +243,78 @@
         gap: 0.5rem;
     }
 }
+/* Match Lihat Resep button size with favorit page */
+.view-btn {
+    flex: 1 1 auto;
+    width: 100%;
+    padding: 10px 15px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.view-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+}
+
+.recipe-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.recipe-meta.actions-row {
+    display: block;
+    width: 100%;
+}
+
+.favorite-btn {
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+}
+
+.favorite-btn.active {
+    color: #ff6b6b;
+}
+
+.favorite-btn:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+/* Match card sizing with favorit page */
+.recipe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+}
+
+.recipe-card {
+    border-radius: 15px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.recipe-image-container {
+    height: 200px;
+}

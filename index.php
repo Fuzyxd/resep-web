@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/database.php';
+$page = isset($_GET['page']) ? $_GET['page'] : 'home';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -11,8 +12,11 @@ require_once __DIR__ . '/includes/database.php';
     <title>Resep Nusantara - Beranda</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/navbar.css">
-    <link rel="stylesheet" href="assets/css/home.css">
-    <link rel="stylesheet" href="assets/css/all_resep.css">
+    <link rel="stylesheet" href="assets/css/home.css?v=<?= filemtime(__DIR__ . '/assets/css/home.css') ?>">
+    <link rel="stylesheet" href="assets/css/all_resep.css?v=<?= filemtime(__DIR__ . '/assets/css/all_resep.css') ?>">
+    <?php if ($page === 'profile'): ?>
+        <link rel="stylesheet" href="assets/css/profile.css">
+    <?php endif; ?>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -20,8 +24,7 @@ require_once __DIR__ . '/includes/database.php';
     <?php include 'includes/navbar.php'; ?>
     
     <main>
-        <?php
-        $page = isset($_GET['page']) ? $_GET['page'] : 'home';
+    <?php
         $allowed_pages = ['home', 'resep', 'favorit', 'profile', 'login', 'register', 'all_resep'];
         
         if (in_array($page, $allowed_pages)) {

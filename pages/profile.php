@@ -119,6 +119,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <i class="fas fa-envelope"></i>
                         <?= htmlspecialchars($user['email']) ?>
                     </p>
+
+                    <p class="profile-fav-count">
+                        <i class="fas fa-heart"></i>
+                        <?= $userStats['total_favorites'] ?? 0 ?> Favorit
+                    </p>
                     
                     <?php if (!empty($user['bio'])): ?>
                         <p class="profile-bio">
@@ -130,31 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="profile-join-date">
                         <i class="fas fa-calendar-alt"></i>
                         Bergabung <?= date('d M Y', strtotime($user['created_at'] ?? 'now')) ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- User Stats -->
-        <div class="profile-stats">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 class="stat-number"><?= $userStats['total_favorites'] ?? 0 ?></h3>
-                        <p class="stat-label">Resep Favorit</p>
-                    </div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 class="stat-number"><?= $userStats['recipes_tried'] ?? 0 ?></h3>
-                        <p class="stat-label">Resep Dicoba</p>
                     </div>
                 </div>
             </div>

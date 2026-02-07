@@ -195,14 +195,16 @@ $categories = getUniqueCategories();
                             }
                         ?>
                         <div class="recipe-card" data-category="<?= strtolower($recipe['kategori'] ?? 'lainnya') ?>">
-                            <div class="recipe-image-container">
-                                <?php $imageSrc = !empty($recipe['gambar_url']) ? $recipe['gambar_url'] : getRecipeImage($recipe); ?>
-                                <img src="<?= htmlspecialchars($imageSrc) ?>"
+                            <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>">
+                                <img src="<?= htmlspecialchars($recipe['image_url'] ?? getRecipeImage($recipe)) ?>"
                                     alt="<?= htmlspecialchars($recipe['judul']) ?>"
                                     class="recipe-image"
                                     loading="lazy"
                                     onerror="this.onerror=null;this.src='assets/images/default-recipe.jpg';">
-                            </div>
+                                <div class="recipe-overlay">
+                                    <div class="recipe-time"><?= ($recipe['waktu'] ?? 0) ?> menit</div>
+                                </div>
+                            </a>
                             <div class="recipe-content">
                                 <h3 class="recipe-title"><?= htmlspecialchars($recipe['judul']) ?></h3>
                                 <p class="recipe-description">
@@ -224,18 +226,16 @@ $categories = getUniqueCategories();
                                         <?= ucfirst($recipe['tingkat_kesulitan']) ?>
                                     </span>
                                 </div>
-                                <div class="recipe-meta">
-                                    <div class="recipe-actions">
-                                        <?php $is_fav = isset($_SESSION['user']) ? isFavorited($_SESSION['user']['uid'], $recipe['id']) : false; ?>
-                                        <button class="favorite-btn <?= $is_fav ? 'active' : '' ?>"
-                                                data-recipe-id="<?= $recipe['id'] ?>"
-                                                data-tooltip="<?= $is_fav ? 'Hapus dari Favorit' : 'Tambahkan ke Favorit' ?>">
-                                            <i class="<?= $is_fav ? 'fas' : 'far' ?> fa-heart"></i>
-                                            <span class="tooltip"><?= $is_fav ? 'Hapus dari Favorit' : 'Tambahkan ke Favorit' ?></span>
-                                        </button>
+                                <div class="recipe-meta actions-row">
+                                <div class="recipe-actions">
                                         <a href="?page=resep&id=<?= $recipe['id'] ?>" class="view-btn">
                                             <i class="fas fa-eye"></i> Lihat Resep
                                         </a>
+                                        <?php $is_fav = isset($_SESSION['user']) ? isFavorited($_SESSION['user']['uid'], $recipe['id']) : false; ?>
+                                        <button class="favorite-btn <?= $is_fav ? 'active' : '' ?>"
+                                                data-recipe-id="<?= $recipe['id'] ?>">
+                                            <i class="<?= $is_fav ? 'fas' : 'far' ?> fa-heart"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -278,11 +278,87 @@ $categories = getUniqueCategories();
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const isLoggedIn = <?= isset($_SESSION['user']) ? 'true' : 'false' ?>;
+
     const filterForm = document.getElementById('filterForm');
-    if (!filterForm) return;
-    filterForm.querySelectorAll('input[type="radio"]').forEach((radio) => {
-        radio.addEventListener('change', () => {
-            filterForm.submit();
+    if (filterForm) {
+        filterForm.querySelectorAll('input[type="radio"]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                filterForm.submit();
+            });
+        });
+    }
+
+    function updateFavoriteButton(btn, favorited) {
+        const heartIcon = btn.querySelector('i');
+        btn.classList.toggle('active', favorited);
+        if (favorited) {
+            heartIcon.classList.remove('far');
+            heartIcon.classList.add('fas');
+            btn.setAttribute('data-tooltip', 'Hapus dari Favorit');
+        } else {
+            heartIcon.classList.remove('fas');
+            heartIcon.classList.add('far');
+            btn.setAttribute('data-tooltip', 'Tambahkan ke Favorit');
+        }
+    }
+
+    const favoriteBtns = document.querySelectorAll('.favorite-btn');
+    favoriteBtns.forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (!isLoggedIn) {
+                alert('Silakan login terlebih dahulu untuk menambahkan ke favorit!');
+                return;
+            }
+
+            const recipeId = this.dataset.recipeId;
+            const heartIcon = this.querySelector('i');
+
+            this.disabled = true;
+            const originalCursor = this.style.cursor;
+            this.style.cursor = 'wait';
+
+            try {
+                const response = await fetch('api/toggle_favorite.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipeId: recipeId })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const favorited = !!result.favorited;
+                    updateFavoriteButton(this, favorited);
+
+                    this.classList.remove('animate-heart');
+                    void this.offsetWidth;
+                    this.classList.add('animate-heart');
+                    setTimeout(() => this.classList.remove('animate-heart'), 600);
+
+                    document.dispatchEvent(new CustomEvent('favorite:changed', {
+                        detail: { recipeId: recipeId, favorited: favorited }
+                    }));
+                } else {
+                    alert('Gagal memperbarui favorit. Silakan coba lagi.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Gagal memperbarui favorit. Silakan coba lagi.');
+            } finally {
+                this.disabled = false;
+                this.style.cursor = originalCursor;
+            }
+        });
+    });
+
+    // Sync with events fired from other sections/pages
+    document.addEventListener('favorite:changed', function(e) {
+        const { recipeId, favorited } = e.detail;
+        document.querySelectorAll(`.favorite-btn[data-recipe-id="${recipeId}"]`).forEach(btn => {
+            updateFavoriteButton(btn, favorited);
         });
     });
 });

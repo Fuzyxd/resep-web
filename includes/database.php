@@ -545,18 +545,8 @@ function getUserById($user_uid) {
 function getUserStats($user_uid) {
     global $conn;
     
-    // Get local user id
-    $user_id = null;
-    $sql = "SELECT id FROM users WHERE firebase_uid = ? LIMIT 1";
-    $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param('s', $user_uid);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($row = $result->fetch_assoc()) {
-            $user_id = $row['id'];
-        }
-    }
+    // Resolve local user id (needed for numeric user_id columns)
+    $user_id = resolveLocalUserIdFromAuth($user_uid);
     
     if (!$user_id) {
         return [
@@ -582,10 +572,31 @@ function getUserStats($user_uid) {
     $colInfo = detectFavoritUserColumn();
     $total_favorites = 0;
     if ($colInfo) {
-        $count_result = $conn->query("SELECT COUNT(*) as count FROM favorit WHERE {$colInfo['name']} = $user_id");
-        if ($count_result) {
-            $row = $count_result->fetch_assoc();
-            $total_favorites = $row['count'] ?? 0;
+        $bindUser = null;
+        if ($colInfo['bind'] === 'i') {
+            $bindUser = (int)$user_id;
+        } else {
+            if (is_array($user_uid)) {
+                $bindUser = $user_uid['uid'] ?? ($user_uid['email'] ?? '');
+            } else {
+                $bindUser = is_string($user_uid) ? $user_uid : '';
+            }
+            if ($bindUser === '' && isset($_SESSION['user'])) {
+                $bindUser = $_SESSION['user']['uid'] ?? ($_SESSION['user']['email'] ?? '');
+            }
+        }
+        if ($bindUser !== null && $bindUser !== '') {
+            $stmt = $conn->prepare("SELECT COUNT(*) as count FROM favorit WHERE {$colInfo['name']} = ?");
+            if ($stmt) {
+                $types = $colInfo['bind'];
+                $stmt->bind_param($types, $bindUser);
+                $stmt->execute();
+                $count_result = $stmt->get_result();
+                if ($count_result) {
+                    $row = $count_result->fetch_assoc();
+                    $total_favorites = $row['count'] ?? 0;
+                }
+            }
         }
     }
     

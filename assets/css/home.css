@@ -276,7 +276,7 @@
 
 .recipe-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 2.5rem;
     margin-top: 3rem;
 }
@@ -312,6 +312,9 @@
     position: relative;
     height: 220px;
     overflow: hidden;
+    display: block;
+    text-decoration: none;
+    color: inherit;
 }
 
 .recipe-image {
@@ -368,36 +371,53 @@
 }
 
 .recipe-meta {
-    display: flex;
-    justify-content: space-between;
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
     align-items: center;
-    padding-top: 1.5rem;
-    border-top: 1px solid #f0f0f0;
+    column-gap: 10px;
+    margin-bottom: 1.2rem;
+}
+
+.recipe-meta.actions-row {
+    display: block;
+    width: 100%;
+    margin-top: 0.6rem;
 }
 
 .recipe-info {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .recipe-info-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: var(--gray);
-    font-size: 0.9rem;
+    gap: 6px;
+    color: #666;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.recipe-info-item span {
+    white-space: nowrap;
 }
 
 .recipe-info-item i {
-    color: var(--primary);
+    color: #ff6b6b;
+    font-size: 0.85rem;
 }
 
 .difficulty-badge {
-    padding: 6px 15px;
+    padding: 6px 12px;
     border-radius: 20px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    justify-self: end;
 }
 
 .difficulty-easy {
@@ -419,6 +439,8 @@
     display: flex;
     gap: 10px;
     align-items: center;
+    width: 100%;
+    justify-content: space-between;
 }
 
 .favorite-btn {
@@ -432,14 +454,15 @@
     justify-content: center;
     cursor: pointer;
     font-size: 1.2rem;
-    color: #ddd;
+    color: #ff6b6b;
     transition: all 0.3s ease;
     position: relative;
+    margin-left: 10px;
 }
 
 .favorite-btn:hover {
     background: rgba(255, 107, 107, 0.1);
-    color: var(--primary);
+    color: #ff6b6b;
 }
 
 .favorite-btn.active {
@@ -452,44 +475,35 @@
 } 
 
 .favorite-btn .tooltip {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--dark);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    margin-bottom: 10px;
+    display: none;
 }
 
 .favorite-btn:hover .tooltip {
-    opacity: 1;
-    visibility: visible;
+    display: none;
 }
 
 .view-btn {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    flex: 1 1 auto;
+    width: 100%;
+    padding: 10px 15px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.95rem;
 }
 
 .view-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
 }
 
 /* CTA Section */
