@@ -37,9 +37,11 @@ if (isset($_SESSION['user'])) {
     $is_favorited = isFavorited($_SESSION['user']['uid'], $recipe_id);
 }
 
-// Parse bahan dan cara masak
-$bahan_list = explode("\n", $recipe['bahan'] ?? '');
-$cara_masak_list = explode("\n", $recipe['cara_masak'] ?? '');
+// Parse bahan dan langkah (DB uses langkah with \n)
+$bahan_list = preg_split("/\\r?\\n/", $recipe['bahan'] ?? '');
+$langkah_raw = $recipe['langkah'] ?? ($recipe['cara_masak'] ?? '');
+$langkah_raw = str_replace('/n', "\n", $langkah_raw);
+$cara_masak_list = preg_split("/\\r?\\n/", $langkah_raw);
 
 // Get similar recipes
 $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
@@ -51,7 +53,7 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
         <nav class="breadcrumb">
             <a href="?page=home"><i class="fas fa-home"></i> Beranda</a>
             <i class="fas fa-chevron-right"></i>
-            <a href="?page=home#categories"><?= htmlspecialchars($recipe['kategori']) ?></a>
+            <a href="?page=all_resep&kategori=<?= urlencode($recipe['kategori'] ?? '') ?>"><?= htmlspecialchars($recipe['kategori']) ?></a>
             <i class="fas fa-chevron-right"></i>
             <span class="current"><?= htmlspecialchars($recipe['judul']) ?></span>
         </nav>
@@ -247,25 +249,23 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
                         if (trim($cara)): 
                             $step_count++;
                     ?>
-                            <div class="instruction-step" data-step="<?= $step_count ?>">
+                            <div class="instruction-step" data-step="<?= $step_count ?>" <?= $step_count === 1 ? '' : 'style="display:none;"' ?>>
                                 <div class="step-number"><?= $step_count ?></div>
                                 <div class="step-content">
-                                    <p><?= htmlspecialchars(trim($cara)) ?></p>
-                                    <?php if ($step_count % 3 == 0): ?>
+                                    <?php
+                                        $step_text = trim($cara);
+                                        $step_text = preg_replace('/^\s*\d+[\.\)\-]?\s*/', '', $step_text);
+                                        $step_text = preg_replace('/\s+/', ' ', $step_text);
+                                    ?>
+                                    <p><?= htmlspecialchars($step_text) ?></p>
+                                    <?php if (preg_match('/\bgoreng\b|di\s*goreng|menggoreng|gorengan/i', $cara)): ?>
                                         <div class="step-tip">
                                             <i class="fas fa-lightbulb"></i>
                                             <strong>Tips:</strong> Pastikan api tidak terlalu besar agar bumbu tidak gosong.
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="step-actions">
-                                    <button class="step-btn done-btn" data-step="<?= $step_count ?>">
-                                        <i class="fas fa-check"></i> Selesai
-                                    </button>
-                                    <button class="step-btn note-btn" data-step="<?= $step_count ?>">
-                                        <i class="fas fa-sticky-note"></i> Catatan
-                                    </button>
-                                </div>
+                                <div class="step-actions"></div>
                             </div>
                         <?php endif;
                     endforeach; ?>
@@ -451,14 +451,14 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
 
 /* Recipe Header */
 .recipe-header {
-    margin-bottom: 3rem;
+    margin-bottom: 1.5rem;
 }
 
 .recipe-hero {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 2rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.2rem;
 }
 
 @media (max-width: 992px) {
@@ -866,14 +866,16 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
 }
 
 .instruction-step {
-    display: flex;
-    gap: 1.5rem;
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    column-gap: 1.5rem;
     margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: #f8f9fa;
-    border-radius: 15px;
-    border-left: 4px solid var(--primary);
+    padding: 1.5rem 1.6rem;
+    background: #fff3f3;
+    border-radius: 18px;
+    border-left: 6px solid var(--primary);
     transition: all 0.3s ease;
+    align-items: center;
 }
 
 .instruction-step:last-child {
@@ -891,8 +893,8 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
 }
 
 .step-number {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     background: var(--primary);
     color: white;
     border-radius: 50%;
@@ -900,8 +902,9 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     flex-shrink: 0;
+    box-shadow: 0 8px 16px rgba(255, 107, 107, 0.25);
 }
 
 .instruction-step.completed .step-number {
@@ -909,13 +912,14 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
 }
 
 .step-content {
-    flex: 1;
+    display: block;
 }
 
 .step-content p {
     line-height: 1.6;
     color: var(--dark);
-    margin-bottom: 0.8rem;
+    margin: 0;
+    font-size: 1.05rem;
 }
 
 .step-tip {
@@ -950,15 +954,6 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     justify-content: center;
     gap: 6px;
     transition: all 0.3s ease;
-}
-
-.done-btn {
-    background: #2ed573;
-    color: white;
-}
-
-.done-btn:hover {
-    background: #27ae60;
 }
 
 .note-btn {
@@ -1539,64 +1534,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Mark step as done
-    instructionsList?.addEventListener('click', function(e) {
-        const doneBtn = e.target.closest('.done-btn');
-        if (doneBtn) {
-            const step = parseInt(doneBtn.dataset.step);
-            const stepElement = document.querySelector(`.instruction-step[data-step="${step}"]`);
-            
-            if (stepElement) {
-                stepElement.classList.toggle('completed');
-                const icon = doneBtn.querySelector('i');
-                if (stepElement.classList.contains('completed')) {
-                    icon.className = 'fas fa-check-circle';
-                    doneBtn.innerHTML = '<i class="fas fa-check-circle"></i> Selesai';
-                    showToast('Langkah ' + step + ' selesai!');
-                    
-                    // Auto-advance to next step
-                    if (step < totalSteps) {
-                        currentStep = step + 1;
-                        updateStepNavigation();
-                        highlightCurrentStep();
-                        scrollToStep(currentStep);
-                    }
-                } else {
-                    icon.className = 'fas fa-check';
-                    doneBtn.innerHTML = '<i class="fas fa-check"></i> Selesai';
-                }
-            }
-        }
-    });
-    
-    // Add note to step
-    instructionsList?.addEventListener('click', function(e) {
-        const noteBtn = e.target.closest('.note-btn');
-        if (noteBtn) {
-            const step = parseInt(noteBtn.dataset.step);
-            const note = prompt('Tambahkan catatan untuk langkah ' + step + ':');
-            if (note) {
-                // Add note to step
-                const stepElement = document.querySelector(`.instruction-step[data-step="${step}"]`);
-                if (stepElement) {
-                    let noteDiv = stepElement.querySelector('.user-note');
-                    if (!noteDiv) {
-                        noteDiv = document.createElement('div');
-                        noteDiv.className = 'user-note';
-                        stepElement.querySelector('.step-content').appendChild(noteDiv);
-                    }
-                    noteDiv.innerHTML = `
-                        <div class="step-tip" style="background: rgba(155, 89, 182, 0.1); border-color: #9b59b6;">
-                            <i class="fas fa-sticky-note"></i>
-                            <strong>Catatan Anda:</strong> ${note}
-                        </div>
-                    `;
-                    showToast('Catatan disimpan!');
-                }
-            }
-        }
-    });
-    
     // Share options
     shareOptions.forEach(option => {
         option.addEventListener('click', function() {
@@ -1663,6 +1600,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentStepSpan.textContent = currentStep;
         prevStepBtn.disabled = currentStep === 1;
         nextStepBtn.disabled = currentStep === totalSteps;
+        showOnlyStep(currentStep);
         
         if (prevStepBtn) {
             prevStepBtn.innerHTML = prevStepBtn.disabled 
@@ -1693,6 +1631,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Highlight current step
         const currentStepElement = document.querySelector(`.instruction-step[data-step="${currentStep}"]`);
         if (currentStepElement) {
+            currentStepElement.style.display = 'block';
             currentStepElement.style.background = 'rgba(255, 107, 107, 0.1)';
             currentStepElement.style.borderColor = 'var(--primary)';
         }
@@ -1706,6 +1645,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 block: 'center'
             });
         }
+    }
+
+    function showOnlyStep(step) {
+        document.querySelectorAll('.instruction-step').forEach(el => {
+            el.style.display = (parseInt(el.dataset.step) === step) ? 'block' : 'none';
+        });
     }
     
     function copyToClipboard(text) {

@@ -1,4 +1,4 @@
-v@keyframes slideOut {
+@keyframes slideOut {
     from {
         opacity: 1;
         transform: translateX(0);
