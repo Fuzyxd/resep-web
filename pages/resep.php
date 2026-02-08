@@ -50,6 +50,21 @@ if (isset($_SESSION['user'])) {
     syncUserProfileFromSession($_SESSION['user']);
 }
 
+if (!function_exists('format_kcal')) {
+    function format_kcal($value) {
+        if ($value === null || $value === '') return '-';
+        return '~' . number_format((float)$value, 0, '.', '') . ' kcal';
+    }
+}
+
+if (!function_exists('format_gram')) {
+    function format_gram($value) {
+        if ($value === null || $value === '') return '-';
+        $num = rtrim(rtrim(number_format((float)$value, 1, '.', ''), '0'), '.');
+        return '~' . $num . 'g';
+    }
+}
+
 // Handle comment submission
 $comment_notice = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_text'])) {
@@ -184,22 +199,22 @@ $comments = getRecipeComments($recipe_id, 50);
                         <div class="nutrition-grid">
                             <div class="nutrition-item">
                                 <span class="nutrition-label">Kalori</span>
-                                <span class="nutrition-value">~350 kcal</span>
+                                <span class="nutrition-value"><?= format_kcal($recipe['kalori'] ?? null) ?></span>
                             </div>
                             <div class="nutrition-item">
                                 <span class="nutrition-label">Protein</span>
-                                <span class="nutrition-value">~25g</span>
+                                <span class="nutrition-value"><?= format_gram($recipe['protein'] ?? null) ?></span>
                             </div>
                             <div class="nutrition-item">
                                 <span class="nutrition-label">Karbohidrat</span>
-                                <span class="nutrition-value">~40g</span>
+                                <span class="nutrition-value"><?= format_gram($recipe['karbohidrat'] ?? null) ?></span>
                             </div>
                             <div class="nutrition-item">
                                 <span class="nutrition-label">Lemak</span>
-                                <span class="nutrition-value">~12g</span>
+                                <span class="nutrition-value"><?= format_gram($recipe['lemak'] ?? null) ?></span>
                             </div>
                         </div>
-                        <p class="nutrition-note">* Perkiraan berdasarkan bahan yang digunakan</p>
+                        <p class="nutrition-note">* Perkiraan per porsi berdasarkan bahan yang digunakan</p>
                     </div>
                 </div>
             </div>
