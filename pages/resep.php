@@ -45,6 +45,36 @@ $cara_masak_list = preg_split("/\\r?\\n/", $langkah_raw);
 
 // Get similar recipes
 $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
+
+if (isset($_SESSION['user'])) {
+    syncUserProfileFromSession($_SESSION['user']);
+}
+
+// Handle comment submission
+$comment_notice = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_text'])) {
+    if (!isset($_SESSION['user'])) {
+        $comment_notice = ['type' => 'error', 'text' => 'Silakan login terlebih dahulu untuk menulis komentar.'];
+    } else {
+        $comment_text = trim($_POST['comment_text']);
+        if ($comment_text === '') {
+            $comment_notice = ['type' => 'error', 'text' => 'Komentar tidak boleh kosong.'];
+        } else {
+            $ok = addRecipeComment($_SESSION['user'], $recipe_id, $comment_text);
+            if ($ok) {
+                header('Location: ?page=resep&id=' . $recipe_id . '&comment=success#comments');
+                exit;
+            }
+            $comment_notice = ['type' => 'error', 'text' => 'Gagal menyimpan komentar. Silakan coba lagi.'];
+        }
+    }
+}
+
+if (isset($_GET['comment']) && $_GET['comment'] === 'success') {
+    $comment_notice = ['type' => 'success', 'text' => 'Komentar berhasil ditambahkan.'];
+}
+
+$comments = getRecipeComments($recipe_id, 50);
 ?>
 
 <section class="recipe-detail-section">
@@ -347,23 +377,68 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
         </div>
         <?php endif; ?>
 
-        <!-- Comments Section (Placeholder) -->
-        <div class="comments-section">
+        <!-- Comments Section -->
+        <div class="comments-section" id="comments">
             <div class="section-header">
-                <h2 class="section-title">Komentar & Ulasan</h2>
-                <p class="section-subtitle">Bagikan pengalaman Anda memasak resep ini</p>
+                <h2 class="section-title">Komentar</h2>
+                <p class="section-subtitle">Bagikan pengalaman Anda memasak resep ini (<?= count($comments) ?> komentar)</p>
             </div>
-            
-            <div class="comments-placeholder">
-                <div class="placeholder-icon">
-                    <i class="far fa-comments"></i>
+
+            <?php if ($comment_notice): ?>
+                <div class="comment-alert <?= $comment_notice['type'] ?>">
+                    <i class="fas <?= $comment_notice['type'] === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?>"></i>
+                    <span><?= htmlspecialchars($comment_notice['text']) ?></span>
                 </div>
-                <h3>Fitur Komentar Segera Hadir!</h3>
-                <p>Kami sedang menyiapkan fitur komentar dan rating untuk resep.</p>
-                <button class="btn btn-primary" disabled>
-                    <i class="fas fa-comment"></i> Tambah Komentar
-                </button>
-            </div>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['user'])): ?>
+                <form class="comment-form" method="POST" action="?page=resep&id=<?= $recipe_id ?>#comments">
+                    <div class="comment-input">
+                        <textarea name="comment_text" rows="3" placeholder="Tulis komentar Anda..." required></textarea>
+                    </div>
+                    <div class="comment-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Kirim Komentar
+                        </button>
+                    </div>
+                </form>
+            <?php else: ?>
+                <div class="comment-login">
+                    <p>Silakan login untuk menulis komentar.</p>
+                    <a href="?page=login" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Login</a>
+                </div>
+            <?php endif; ?>
+
+            <?php if (count($comments) > 0): ?>
+                <div class="comment-list">
+                    <?php foreach ($comments as $c): ?>
+                        <div class="comment-card">
+                            <div class="comment-avatar">
+                                <?php if (!empty($c['photo_url'])): ?>
+                                    <img src="<?= htmlspecialchars($c['photo_url']) ?>" alt="<?= htmlspecialchars($c['display_name']) ?>">
+                                <?php else: ?>
+                                    <span><?= strtoupper(substr($c['display_name'], 0, 1)) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="comment-body">
+                                <div class="comment-meta">
+                                    <strong><?= htmlspecialchars($c['display_name']) ?></strong>
+                                    <span><?= date('d M Y H:i', strtotime($c['created_at'])) ?></span>
+                                </div>
+                                <p><?= nl2br(htmlspecialchars($c['komentar'])) ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="comment-empty">
+                    <div class="placeholder-icon">
+                        <i class="far fa-comments"></i>
+                    </div>
+                    <h3>Belum ada komentar</h3>
+                    <p>Jadilah yang pertama memberikan komentar untuk resep ini.</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -1127,12 +1202,133 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     font-size: 1rem;
 }
 
-.comments-placeholder {
-    text-align: center;
-    padding: 3rem 2rem;
+.comment-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
 }
 
-.placeholder-icon {
+.comment-alert.success {
+    background: rgba(46, 213, 115, 0.15);
+    color: #1e8f50;
+    border: 1px solid rgba(46, 213, 115, 0.3);
+}
+
+.comment-alert.error {
+    background: rgba(255, 107, 107, 0.12);
+    color: #c0392b;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.comment-form {
+    background: #f8f9fa;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.8rem;
+    border: 1px solid var(--light-gray);
+}
+
+.comment-input textarea {
+    width: 100%;
+    resize: vertical;
+    border: 2px solid var(--light-gray);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    min-height: 90px;
+}
+
+.comment-input textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.15);
+}
+
+.comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.comment-login {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+    background: #fff3f3;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    margin-bottom: 1.5rem;
+}
+
+.comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.comment-card {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid var(--light-gray);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.comment-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.05rem;
+    overflow: hidden;
+}
+
+.comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comment-body p {
+    margin: 0.5rem 0 0;
+    color: var(--dark);
+    line-height: 1.6;
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.comment-meta strong {
+    color: var(--dark);
+    font-size: 0.95rem;
+}
+
+.comment-empty {
+    text-align: center;
+    padding: 2.5rem 2rem;
+}
+
+.comment-empty .placeholder-icon {
     width: 80px;
     height: 80px;
     background: rgba(255, 107, 107, 0.1);
@@ -1140,23 +1336,21 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1.5rem;
-    font-size: 2.5rem;
+    margin: 0 auto 1.2rem;
+    font-size: 2.4rem;
     color: var(--primary);
 }
 
-.comments-placeholder h3 {
-    font-size: 1.5rem;
-    margin-bottom: 0.8rem;
+.comment-empty h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.6rem;
     color: var(--dark);
 }
 
-.comments-placeholder p {
+.comment-empty p {
     color: var(--gray);
-    margin-bottom: 2rem;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 420px;
+    margin: 0 auto;
 }
 
 /* Modal */
@@ -1322,6 +1516,15 @@ $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
     
     .ingredients-actions {
         flex-direction: column;
+    }
+
+    .comment-login {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .comment-card {
+        grid-template-columns: 40px 1fr;
     }
 }
 

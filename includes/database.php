@@ -285,6 +285,20 @@ function resolveLocalUserIdFromAuth($sessionUser) {
             }
         }
 
+        if (isset($sessionUser['displayName'])) {
+            $nameCols = $conn->query("SHOW COLUMNS FROM users LIKE 'display_name'");
+            if ($nameCols && $nameCols->num_rows > 0) {
+                $cols[] = '`display_name`'; $placeholders[] = '?'; $types .= 's'; $values[] = $sessionUser['displayName'];
+            }
+        }
+
+        if (isset($sessionUser['photoURL'])) {
+            $photoCols = $conn->query("SHOW COLUMNS FROM users LIKE 'photo_url'");
+            if ($photoCols && $photoCols->num_rows > 0) {
+                $cols[] = '`photo_url`'; $placeholders[] = '?'; $types .= 's'; $values[] = $sessionUser['photoURL'];
+            }
+        }
+
         if (count($cols) === 0) {
             // Nothing to insert (no matching columns)
             return null;
@@ -307,6 +321,52 @@ function resolveLocalUserIdFromAuth($sessionUser) {
     }
 
     return null;
+}
+
+// Sync display name and photo from session into users table
+function syncUserProfileFromSession($sessionUser) {
+    global $conn;
+    if (!$sessionUser) return null;
+
+    $user_id = resolveLocalUserIdFromAuth($sessionUser);
+    if (!$user_id) return null;
+
+    $displayName = $sessionUser['displayName'] ?? ($sessionUser['display_name'] ?? null);
+    $photoUrl = $sessionUser['photoURL'] ?? ($sessionUser['photo_url'] ?? null);
+
+    $sets = [];
+    $types = '';
+    $values = [];
+
+    if ($displayName) {
+        $nameCols = $conn->query("SHOW COLUMNS FROM users LIKE 'display_name'");
+        if ($nameCols && $nameCols->num_rows > 0) {
+            $sets[] = "display_name = ?";
+            $types .= 's';
+            $values[] = $displayName;
+        }
+    }
+
+    if ($photoUrl) {
+        $photoCols = $conn->query("SHOW COLUMNS FROM users LIKE 'photo_url'");
+        if ($photoCols && $photoCols->num_rows > 0) {
+            $sets[] = "photo_url = ?";
+            $types .= 's';
+            $values[] = $photoUrl;
+        }
+    }
+
+    if (count($sets) === 0) return $user_id;
+
+    $sql = "UPDATE users SET " . implode(', ', $sets) . " WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return $user_id;
+    $types .= 'i';
+    $values[] = (int)$user_id;
+    $stmt->bind_param($types, ...$values);
+    $stmt->execute();
+
+    return $user_id;
 }
 
 function isFavorited($user_uid, $resep_id) {
@@ -383,7 +443,65 @@ function toggleFavorite($user_uid, $resep_id) {
     $types = $colInfo['bind'] . 'i';
     $stmt->bind_param($types, $bindUser, $resep_id);
     return $stmt->execute();
-} 
+}
+
+// Comments (stored in rating table, rating can be NULL)
+function addRecipeComment($user_uid, $resep_id, $comment) {
+    global $conn;
+    $comment = trim((string)$comment);
+    if ($comment === '' || !$resep_id) return false;
+
+    // Ensure rating table exists with needed columns
+    $res = $conn->query("SHOW COLUMNS FROM rating LIKE 'user_id'");
+    if (!$res || $res->num_rows === 0) return false;
+    $res = $conn->query("SHOW COLUMNS FROM rating LIKE 'resep_id'");
+    if (!$res || $res->num_rows === 0) return false;
+    $res = $conn->query("SHOW COLUMNS FROM rating LIKE 'komentar'");
+    if (!$res || $res->num_rows === 0) return false;
+
+    $user_id = $user_uid;
+    if (!is_numeric($user_uid)) {
+        $resolved = syncUserProfileFromSession(is_array($user_uid) ? $user_uid : (isset($_SESSION['user']) ? $_SESSION['user'] : null));
+        if (!$resolved) return false;
+        $user_id = (int)$resolved;
+    } else {
+        $user_id = (int)$user_uid;
+    }
+
+    $sql = "INSERT INTO rating (user_id, resep_id, rating, komentar, created_at) VALUES (?, ?, NULL, ?, NOW())";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return false;
+    $stmt->bind_param("iis", $user_id, $resep_id, $comment);
+    return $stmt->execute();
+}
+
+function getRecipeComments($resep_id, $limit = 50) {
+    global $conn;
+    if (!$resep_id) return [];
+
+    $res = $conn->query("SHOW COLUMNS FROM rating LIKE 'komentar'");
+    if (!$res || $res->num_rows === 0) return [];
+
+    $sql = "SELECT r.komentar, r.created_at, u.display_name, u.photo_url, u.email
+            FROM rating r
+            LEFT JOIN users u ON u.id = r.user_id
+            WHERE r.resep_id = ? AND r.komentar IS NOT NULL AND r.komentar <> ''
+            ORDER BY r.id DESC
+            LIMIT ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
+    $stmt->bind_param("ii", $resep_id, $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $comments = [];
+    while ($row = $result->fetch_assoc()) {
+        $name = $row['display_name'] ?: ($row['email'] ? explode('@', $row['email'])[0] : 'Pengguna');
+        $row['display_name'] = $name;
+        $comments[] = $row;
+    }
+    return $comments;
+}
 
 function getUserFavorites($user_uid, $limit = 20) {
     global $conn;
