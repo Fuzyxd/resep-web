@@ -62,11 +62,6 @@
             
             <div class="recipe-grid" id="featuredGrid">
                 <?php 
-                $editorChoices = [
-                    'ayam rica-rica manado',
-                    'ikan goreng sambal dabu-dabu',
-                    'tumis kangkung terasi'
-                ];
                 foreach ($featuredRecipes as $recipe): 
                     $difficultyClass = '';
                     switch(strtolower($recipe['tingkat_kesulitan'])) {
@@ -80,11 +75,9 @@
                         data-category="<?= strtolower($recipe['kategori'] ?? 'lainnya') ?>"
                         data-difficulty="<?= $recipe['tingkat_kesulitan'] ?>">
                         
-                        <?php if (in_array(strtolower(trim($recipe['judul'] ?? '')), $editorChoices, true)): ?>
-                            <div class="recipe-badge">
-                                <i class="fas fa-star"></i> Pilihan Editor
-                            </div>
-                        <?php endif; ?>
+                        <div class="recipe-badge">
+                            <i class="fas fa-star"></i> Pilihan Editor
+                        </div>
                         
                         <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>&from=home">
                             <img src="<?= htmlspecialchars($recipe['image_url']) ?>" 
