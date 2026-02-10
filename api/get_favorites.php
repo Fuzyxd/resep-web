@@ -18,7 +18,7 @@ try {
     $favorites = [];
     if ($res && method_exists($res, 'fetch_assoc')) {
         while ($row = $res->fetch_assoc()) {
-            $row['image_url'] = getRecipeImage($row);
+            $row['image_url'] = getRecipeImage($row, 'thumb');
             $favorites[] = [
                 'id' => (int)$row['id'],
                 'judul' => $row['judul'],

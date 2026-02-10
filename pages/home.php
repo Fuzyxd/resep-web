@@ -62,9 +62,12 @@
             
             <div class="recipe-grid" id="featuredGrid">
                 <?php 
-                $count = 0;
+                $editorChoices = [
+                    'ayam rica-rica manado',
+                    'ikan goreng sambal dabu-dabu',
+                    'tumis kangkung terasi'
+                ];
                 foreach ($featuredRecipes as $recipe): 
-                    $count++;
                     $difficultyClass = '';
                     switch(strtolower($recipe['tingkat_kesulitan'])) {
                         case 'mudah': $difficultyClass = 'difficulty-easy'; break;
@@ -77,13 +80,13 @@
                         data-category="<?= strtolower($recipe['kategori'] ?? 'lainnya') ?>"
                         data-difficulty="<?= $recipe['tingkat_kesulitan'] ?>">
                         
-                        <?php if ($count <= 3): ?>
+                        <?php if (in_array(strtolower(trim($recipe['judul'] ?? '')), $editorChoices, true)): ?>
                             <div class="recipe-badge">
                                 <i class="fas fa-star"></i> Pilihan Editor
                             </div>
                         <?php endif; ?>
                         
-                        <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>">
+                        <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>&from=home">
                             <img src="<?= htmlspecialchars($recipe['image_url']) ?>" 
                                 alt="<?= htmlspecialchars($recipe['judul']) ?>" 
                                 class="recipe-image"
@@ -119,7 +122,7 @@
                             
                             <div class="recipe-meta">
                                 <div class="recipe-actions">
-                                    <a href="?page=resep&id=<?= $recipe['id'] ?>" 
+                                    <a href="?page=resep&id=<?= $recipe['id'] ?>&from=home" 
                                     class="view-btn">
                                         <i class="fas fa-eye"></i> Lihat Resep
                                     </a>
@@ -311,7 +314,7 @@
             card.dataset.difficulty = recipe.tingkat_kesulitan;
             
             card.innerHTML = `
-                <a class="recipe-image-container" href="?page=resep&id=${recipe.id}">
+                <a class="recipe-image-container" href="?page=resep&id=${recipe.id}&from=home">
                     <img src="${recipe.image_url || 'assets/images/default-recipe.jpg'}" 
                         alt="${recipe.judul}" 
                         class="recipe-image"
@@ -346,7 +349,7 @@
                     
                     <div class="recipe-meta">
                         <div class="recipe-actions">
-                            <a href="?page=resep&id=${recipe.id}" class="view-btn">
+                            <a href="?page=resep&id=${recipe.id}&from=home" class="view-btn">
                                 <i class="fas fa-eye"></i> Lihat Resep
                             </a>
                             

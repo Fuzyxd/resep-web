@@ -4,23 +4,38 @@ header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
-    
+
     if ($data && isset($data['uid'])) {
+        require_once __DIR__ . '/../includes/database.php';
+
         $_SESSION['user'] = [
             'uid' => $data['uid'],
-            'email' => $data['email'],
-            'displayName' => $data['displayName'],
-            'photoURL' => $data['photoURL']
+            'email' => $data['email'] ?? null,
+            'displayName' => $data['displayName'] ?? null,
+            'photoURL' => $data['photoURL'] ?? null
         ];
 
-        // Attempt to resolve or create a local user id and store it in session for FK-safe operations
-        require_once __DIR__ . '/../includes/database.php';
+        // Resolve local user id for FK-safe operations
         $localId = resolveLocalUserIdFromAuth($_SESSION['user']);
         if ($localId) {
             $_SESSION['user']['id'] = $localId;
         }
 
-        echo json_encode(['success' => true, 'message' => 'Session updated', 'local_id' => $localId ?? null]);
+        // Hydrate session with local DB values (if any)
+        if (function_exists('hydrateSessionUser')) {
+            $_SESSION['user'] = hydrateSessionUser($_SESSION['user']);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Session updated',
+            'local_id' => $localId ?? null,
+            'user' => [
+                'displayName' => $_SESSION['user']['displayName'] ?? null,
+                'photoURL' => $_SESSION['user']['photoURL'] ?? null,
+                'email' => $_SESSION['user']['email'] ?? null
+            ]
+        ]);
     } else {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid data']);

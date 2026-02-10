@@ -9,7 +9,7 @@ if (!isset($_SESSION['user']) || !$_SESSION['user']) {
 }
 
 $user = $_SESSION['user'];
-$user_id = $user['uid'];
+$user_id = $user;
 
 // Get user stats from database
 $userStats = getUserStats($user_id);
@@ -22,12 +22,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fullname = trim($_POST['fullname'] ?? '');
         $bio = trim($_POST['bio'] ?? '');
         
-        if (updateUserProfile($user_id, $fullname, $bio)) {
+        if (updateUserProfile($user, $fullname, $bio)) {
             $_SESSION['success_message'] = 'Profil berhasil diperbarui!';
             
-            // Refresh user data
-            $user = getUserById($user_id);
-            $_SESSION['user'] = $user;
+            // Refresh user data (fallback to session if DB lookup fails)
+            $fresh = getUserById($user);
+            if ($fresh) {
+                $_SESSION['user']['displayName'] = $fresh['display_name'] ?? ($_SESSION['user']['displayName'] ?? null);
+                $_SESSION['user']['photoURL'] = $fresh['photo_url'] ?? ($_SESSION['user']['photoURL'] ?? null);
+                $_SESSION['user']['email'] = $fresh['email'] ?? ($_SESSION['user']['email'] ?? null);
+            } else {
+                $_SESSION['user']['displayName'] = $fullname !== '' ? $fullname : ($_SESSION['user']['displayName'] ?? null);
+                if ($bio !== '') {
+                    $_SESSION['user']['bio'] = $bio;
+                }
+            }
             
             header('Location: ?page=profile');
             exit;
@@ -53,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-        $upload_result = uploadUserAvatar($user_id, $_FILES['avatar']);
+        $upload_result = uploadUserAvatar($user, $_FILES['avatar']);
         
         if ($upload_result['success']) {
             $_SESSION['success_message'] = 'Foto profil berhasil diperbarui!';
@@ -144,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-content">
             <div class="tabs">
                 <button class="tab-btn active" data-tab="profile">Profil</button>
-                <button class="tab-btn" data-tab="favorites">Favorit</button>
                 <button class="tab-btn" data-tab="security">Keamanan</button>
             </div>
             
@@ -197,92 +205,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
                 
-                <!-- Favorites Tab -->
-                <div class="tab-pane" id="favorites">
-                    <div class="section-header">
-                        <h3><i class="fas fa-heart"></i> Resep Favorit</h3>
-                        <p>Resep yang telah Anda tandai sebagai favorit</p>
-                    </div>
-                    
-                    <?php if (!empty($favoriteRecipes)): ?>
-                        <div class="favorites-grid">
-                            <?php foreach ($favoriteRecipes as $recipe): ?>
-                                <div class="favorite-card" data-recipe-id="<?= $recipe['id'] ?>" data-category="<?= htmlspecialchars(strtolower($recipe['kategori'] ?? '')) ?>" data-difficulty="<?= htmlspecialchars($recipe['tingkat_kesulitan'] ?? '') ?>" data-time="<?= intval($recipe['waktu'] ?? 0) ?>">
-                                    
-                                    <button class="remove-favorite" data-recipe-id="<?= $recipe['id'] ?>" title="Hapus dari favorit">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                    
-                                    <div class="favorite-image">
-                                        <img src="<?= htmlspecialchars($recipe['image_url'] ?? 'assets/images/default-recipe.jpg') ?>" 
-                                             alt="<?= htmlspecialchars($recipe['judul']) ?>"
-                                             onerror="this.onerror=null;this.src='assets/images/default-recipe.jpg';">
-                                        <div class="favorite-overlay">
-                                            <a href="?page=resep&id=<?= $recipe['id'] ?>" class="quick-view">
-                                                <i class="fas fa-eye"></i> Lihat Resep
-                                            </a>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="favorite-info">
-                                        <div class="recipe-header">
-                                            <h5 class="recipe-title"><?= htmlspecialchars($recipe['judul']) ?></h5>
-                                        </div>
-                                        
-                                        <p class="recipe-description">
-                                            <?= htmlspecialchars(substr($recipe['deskripsi'], 0, 100)) ?>...
-                                        </p>
-                                        
-                                        <div class="recipe-meta">
-                                            <div class="meta-item">
-                                                <i class="fas fa-clock"></i>
-                                                <span><?= intval($recipe['waktu'] ?? 0) ?> menit</span>
-                                            </div>
-                                            <div class="meta-item">
-                                                <i class="fas fa-user-friends"></i>
-                                                <span><?= $recipe['porsi'] ?> porsi</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="difficulty-time">
-                                            <span class="difficulty-badge <?= getDifficultyClass($recipe['tingkat_kesulitan']) ?>">
-                                                <?= ucfirst($recipe['tingkat_kesulitan']) ?>
-                                            </span>
-                                            <span class="time-badge">
-                                                <i class="fas fa-hourglass-end"></i> <?= intval($recipe['waktu'] ?? 0) ?> menit
-                                            </span>
-                                        </div>
-                                        
-                                        <div class="recipe-actions">
-                                            <a href="?page=resep&id=<?= $recipe['id'] ?>" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-eye"></i> Lihat Resep
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                        
-                        <?php if ($userStats['total_favorites'] > 6): ?>
-                            <div class="text-center mt-3">
-                                <a href="?page=favorites" class="btn btn-outline">
-                                    <i class="fas fa-list"></i> Lihat Semua Favorit
-                                </a>
-                            </div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <div class="empty-state">
-                            <div class="empty-icon">
-                                <i class="far fa-heart"></i>
-                            </div>
-                            <h4>Belum ada resep favorit</h4>
-                            <p>Mulai jelajahi resep dan tambahkan ke favorit untuk melihatnya di sini</p>
-                            <a href="?page=resep" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Jelajahi Resep
-                            </a>
-                        </div>
-                    <?php endif; ?>
-                </div>
                 
                 <!-- Security Tab -->
                 <div class="tab-pane" id="security">
@@ -611,67 +533,6 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Remove favorite functionality for profile page
-document.querySelectorAll('.remove-favorite').forEach(btn => {
-    btn.addEventListener('click', async function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        
-        const recipeId = this.dataset.recipeId;
-        const card = this.closest('.favorite-card');
-        
-        if (!confirm('Hapus resep dari favorit?')) return;
-        
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        this.disabled = true;
-        
-        try {
-            const response = await fetch('api/toggle_favorite.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    recipeId: recipeId,
-                    action: 'remove'
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                // Animate out and remove
-                card.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => {
-                    card.remove();
-                    showNotification('Dihapus dari favorit', 'success');
-                }, 300);
-            } else {
-                this.innerHTML = '<i class="fas fa-times"></i>';
-                this.disabled = false;
-                showNotification('Gagal menghapus favorit', 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            this.innerHTML = '<i class="fas fa-times"></i>';
-            this.disabled = false;
-            showNotification('Terjadi kesalahan', 'error');
-        }
-    });
-});
-
-// Listen for favorite changes from other pages
-document.addEventListener('favorite:changed', function(e) {
-    const { recipeId, favorited } = e.detail;
-    if (!favorited) {
-        // Remove from profile if unfavorited elsewhere
-        const card = document.querySelector(`.favorite-card[data-recipe-id="${recipeId}"]`);
-        if (card) {
-            card.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => card.remove(), 300);
-        }
-    }
-});
 </script>
 
 <style>

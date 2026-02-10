@@ -6,6 +6,8 @@ $selectedCategory = $_GET['kategori'] ?? '';
 $selectedDifficulty = $_GET['kesulitan'] ?? '';
 $selectedTime = $_GET['waktu'] ?? '';
 $searchQuery = trim($_GET['q'] ?? '');
+$selectedCategoryNorm = strtolower(trim($selectedCategory));
+$selectedDifficultyNorm = strtolower(trim($selectedDifficulty));
 
 // Pagination
 $pageNum = isset($_GET['p']) ? (int) $_GET['p'] : 1;
@@ -19,14 +21,14 @@ $params = [];
 $types = '';
 
 if ($selectedCategory !== '') {
-    $where[] = 'kategori = ?';
-    $params[] = $selectedCategory;
+    $where[] = 'LOWER(TRIM(kategori)) = ?';
+    $params[] = $selectedCategoryNorm;
     $types .= 's';
 }
 
 if ($selectedDifficulty !== '') {
-    $where[] = 'tingkat_kesulitan = ?';
-    $params[] = $selectedDifficulty;
+    $where[] = 'LOWER(TRIM(tingkat_kesulitan)) = ?';
+    $params[] = $selectedDifficultyNorm;
     $types .= 's';
 }
 
@@ -195,8 +197,8 @@ $categories = getUniqueCategories();
                             }
                         ?>
                         <div class="recipe-card" data-category="<?= strtolower($recipe['kategori'] ?? 'lainnya') ?>">
-                            <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>">
-                                <img src="<?= htmlspecialchars($recipe['image_url'] ?? getRecipeImage($recipe)) ?>"
+                            <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>&from=all_resep">
+                                <img src="<?= htmlspecialchars($recipe['image_url'] ?? getRecipeImage($recipe, 'thumb')) ?>"
                                     alt="<?= htmlspecialchars($recipe['judul']) ?>"
                                     class="recipe-image"
                                     loading="lazy"
@@ -228,7 +230,7 @@ $categories = getUniqueCategories();
                                 </div>
                                 <div class="recipe-meta actions-row">
                                 <div class="recipe-actions">
-                                        <a href="?page=resep&id=<?= $recipe['id'] ?>" class="view-btn">
+                                        <a href="?page=resep&id=<?= $recipe['id'] ?>&from=all_resep" class="view-btn">
                                             <i class="fas fa-eye"></i> Lihat Resep
                                         </a>
                                         <?php $is_fav = isset($_SESSION['user']) ? isFavorited($_SESSION['user']['uid'], $recipe['id']) : false; ?>

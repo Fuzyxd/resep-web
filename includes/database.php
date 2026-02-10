@@ -69,9 +69,11 @@ function getFilteredRecipes($sql, $params = [], $types = "") {
 
     $recipes = [];
     while ($row = $result->fetch_assoc()) {
+        $thumb = getRecipeImage($row, 'thumb');
         if (empty($row['gambar_url'])) {
-            $row['gambar_url'] = getRecipeImage($row);
+            $row['gambar_url'] = $thumb;
         }
+        $row['image_url'] = $thumb;
         $recipes[] = $row;
     }
     return $recipes;
@@ -80,7 +82,7 @@ function getFilteredRecipes($sql, $params = [], $types = "") {
 function getUniqueCategories() {
     global $conn;
     $categories = [];
-    $sql = "SELECT DISTINCT kategori FROM resep WHERE kategori IS NOT NULL AND kategori <> '' ORDER BY kategori ASC";
+    $sql = "SELECT DISTINCT TRIM(kategori) AS kategori FROM resep WHERE kategori IS NOT NULL AND TRIM(kategori) <> '' ORDER BY kategori ASC";
     $result = $conn->query($sql);
     if ($result) {
         while ($row = $result->fetch_assoc()) {
@@ -101,9 +103,11 @@ function getFeaturedRecipes($limit = 3) {
 
     $recipes = [];
     while ($row = $result->fetch_assoc()) {
+        $thumb = getRecipeImage($row, 'thumb');
         if (empty($row['gambar_url'])) {
-            $row['gambar_url'] = getRecipeImage($row);
+            $row['gambar_url'] = $thumb;
         }
+        $row['image_url'] = $thumb;
         $recipes[] = $row;
     }
     return $recipes;
@@ -120,10 +124,11 @@ function getTotalRecipesCount() {
 
 function getRecipeCountByCategory($category) {
     global $conn;
-    $sql = "SELECT COUNT(*) as total FROM resep WHERE kategori = ?";
+    $sql = "SELECT COUNT(*) as total FROM resep WHERE LOWER(TRIM(kategori)) = ?";
     $stmt = $conn->prepare($sql);
     if (!$stmt) return 0;
-    $stmt->bind_param("s", $category);
+    $categoryNorm = strtolower(trim($category));
+    $stmt->bind_param("s", $categoryNorm);
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result && ($row = $result->fetch_assoc())) {
@@ -134,10 +139,11 @@ function getRecipeCountByCategory($category) {
 
 function getRecipeCountByDifficulty($difficulty) {
     global $conn;
-    $sql = "SELECT COUNT(*) as total FROM resep WHERE tingkat_kesulitan = ?";
+    $sql = "SELECT COUNT(*) as total FROM resep WHERE LOWER(TRIM(tingkat_kesulitan)) = ?";
     $stmt = $conn->prepare($sql);
     if (!$stmt) return 0;
-    $stmt->bind_param("s", $difficulty);
+    $difficultyNorm = strtolower(trim($difficulty));
+    $stmt->bind_param("s", $difficultyNorm);
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result && ($row = $result->fetch_assoc())) {
@@ -369,6 +375,27 @@ function syncUserProfileFromSession($sessionUser) {
     return $user_id;
 }
 
+// Hydrate session user with local DB values (display name, photo, email, id)
+function hydrateSessionUser($sessionUser) {
+    if (!is_array($sessionUser)) return $sessionUser;
+    $dbUser = getUserById($sessionUser);
+    if (!$dbUser) return $sessionUser;
+
+    if (!empty($dbUser['display_name'])) {
+        $sessionUser['displayName'] = $dbUser['display_name'];
+    }
+    if (!empty($dbUser['photo_url'])) {
+        $sessionUser['photoURL'] = $dbUser['photo_url'];
+    }
+    if (!empty($dbUser['email'])) {
+        $sessionUser['email'] = $dbUser['email'];
+    }
+    if (!empty($dbUser['id'])) {
+        $sessionUser['id'] = $dbUser['id'];
+    }
+    return $sessionUser;
+}
+
 function isFavorited($user_uid, $resep_id) {
     global $conn;
     $colInfo = detectFavoritUserColumn();
@@ -559,10 +586,35 @@ function getUserFavorites($user_uid, $limit = 20) {
 }
 
 // Add helper to resolve recipe images with fallbacks
-function getRecipeImage($recipe) {
-    // Jika ada gambar_url di database dan file ada, gunakan itu
-    if (!empty($recipe['gambar_url']) && file_exists($recipe['gambar_url'])) {
-        return $recipe['gambar_url'];
+function getRecipeImageThumbPath($path) {
+    if (empty($path)) return '';
+    $prefix = 'assets/images/uploads/recipes/';
+    if (strpos($path, $prefix) !== 0) {
+        return '';
+    }
+    return $prefix . 'thumbs/' . basename($path);
+}
+
+function getRecipeImage($recipe, $variant = 'full') {
+    $variant = ($variant === 'thumb') ? 'thumb' : 'full';
+    // Prefer explicit image fields if available
+    $primary_path = '';
+    if (!empty($recipe['gambar'])) {
+        $primary_path = $recipe['gambar'];
+    } elseif (!empty($recipe['gambar_url'])) {
+        $primary_path = $recipe['gambar_url'];
+    }
+
+    if ($primary_path) {
+        if ($variant === 'thumb') {
+            $thumb_path = getRecipeImageThumbPath($primary_path);
+            if ($thumb_path && file_exists($thumb_path)) {
+                return $thumb_path;
+            }
+        }
+        if (file_exists($primary_path)) {
+            return $primary_path;
+        }
     }
 
     // Coba cari gambar berdasarkan slug judul di folder uploads
@@ -583,6 +635,12 @@ function getRecipeImage($recipe) {
             // may not have a `gambar_url` column which would cause errors.
             // Return the found file path so caller can use it.
 
+            if ($variant === 'thumb') {
+                $thumb_path = getRecipeImageThumbPath($file);
+                if ($thumb_path && file_exists($thumb_path)) {
+                    return $thumb_path;
+                }
+            }
             return $file;
         }
     }
@@ -617,7 +675,7 @@ function getRecipesWithImages($limit = 10, $offset = 0) {
 
     $recipes = [];
     while ($row = $result->fetch_assoc()) {
-        $row['image_url'] = getRecipeImage($row);
+        $row['image_url'] = getRecipeImage($row, 'thumb');
         $recipes[] = $row;
     }
 
@@ -634,7 +692,7 @@ function getRecipeWithImage($id) {
     $result = $stmt->get_result();
 
     if ($row = $result->fetch_assoc()) {
-        $row['image_url'] = getRecipeImage($row);
+        $row['image_url'] = getRecipeImage($row, 'thumb');
         return $row;
     }
 
@@ -644,8 +702,56 @@ function getRecipeWithImage($id) {
 // Profile functions
 function getUserById($user_uid) {
     global $conn;
-    
-    // Try firebase_uid first
+
+    // Accept session user array
+    if (is_array($user_uid)) {
+        $localId = resolveLocalUserIdFromAuth($user_uid);
+        if ($localId) {
+            return getUserById($localId);
+        }
+        $email = $user_uid['email'] ?? null;
+        $uid = $user_uid['uid'] ?? null;
+        if ($email) {
+            return getUserById($email);
+        }
+        if ($uid) {
+            return getUserById($uid);
+        }
+        return null;
+    }
+
+    // If numeric, try local id
+    if (is_numeric($user_uid)) {
+        $sql = "SELECT * FROM users WHERE id = ? LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $id = (int)$user_uid;
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($row = $result->fetch_assoc()) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    // If email, try email match
+    if (is_string($user_uid) && strpos($user_uid, '@') !== false) {
+        $sql = "SELECT * FROM users WHERE email = ? LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('s', $user_uid);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($row = $result->fetch_assoc()) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    // Fallback: try firebase_uid
     $sql = "SELECT * FROM users WHERE firebase_uid = ? LIMIT 1";
     $stmt = $conn->prepare($sql);
     if ($stmt) {
@@ -656,7 +762,7 @@ function getUserById($user_uid) {
             return $row;
         }
     }
-    
+
     return null;
 }
 
@@ -751,26 +857,26 @@ function getUserStats($user_uid) {
 function getUserFavoriteRecipes($user_uid, $limit = 6) {
     global $conn;
     
-    // Get local user id
-    $user_id = null;
-    $sql = "SELECT id FROM users WHERE firebase_uid = ? LIMIT 1";
-    $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param('s', $user_uid);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($row = $result->fetch_assoc()) {
-            $user_id = $row['id'];
-        }
-    }
-    
-    if (!$user_id) {
-        return [];
-    }
-    
     $colInfo = detectFavoritUserColumn();
     if (!$colInfo) {
         return [];
+    }
+
+    $user_id = resolveLocalUserIdFromAuth($user_uid);
+    $bindUser = null;
+    if ($colInfo['bind'] === 'i') {
+        if (!$user_id) return [];
+        $bindUser = (int)$user_id;
+    } else {
+        if (is_array($user_uid)) {
+            $bindUser = $user_uid['uid'] ?? ($user_uid['email'] ?? '');
+        } else {
+            $bindUser = is_string($user_uid) ? $user_uid : '';
+        }
+        if ($bindUser === '' && isset($_SESSION['user'])) {
+            $bindUser = $_SESSION['user']['uid'] ?? ($_SESSION['user']['email'] ?? '');
+        }
+        if ($bindUser === '') return [];
     }
     
     $sql = "SELECT r.* FROM resep r 
@@ -784,13 +890,14 @@ function getUserFavoriteRecipes($user_uid, $limit = 6) {
         return [];
     }
     
-    $stmt->bind_param('ii', $user_id, $limit);
+    $types = $colInfo['bind'] . 'i';
+    $stmt->bind_param($types, $bindUser, $limit);
     $stmt->execute();
     $result = $stmt->get_result();
     
     $recipes = [];
     while ($row = $result->fetch_assoc()) {
-        $row['image_url'] = getRecipeImage($row);
+        $row['image_url'] = getRecipeImage($row, 'thumb');
         $recipes[] = $row;
     }
     
@@ -807,22 +914,8 @@ function getUserRecipes($user_uid, $limit = 6) {
         return [];
     }
     
-    // Get local user id
-    $user_id = null;
-    $sql = "SELECT id FROM users WHERE firebase_uid = ? LIMIT 1";
-    $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param('s', $user_uid);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($row = $result->fetch_assoc()) {
-            $user_id = $row['id'];
-        }
-    }
-    
-    if (!$user_id) {
-        return [];
-    }
+    $user_id = resolveLocalUserIdFromAuth($user_uid);
+    if (!$user_id) return [];
     
     $sql = "SELECT r.* FROM resep r WHERE r.user_id = ? ORDER BY r.created_at DESC LIMIT ?";
     $stmt = $conn->prepare($sql);
@@ -836,7 +929,7 @@ function getUserRecipes($user_uid, $limit = 6) {
     
     $recipes = [];
     while ($row = $result->fetch_assoc()) {
-        $row['image_url'] = getRecipeImage($row);
+        $row['image_url'] = getRecipeImage($row, 'thumb');
         $row['views'] = 0; // Placeholder
         $row['favorite_count'] = 0; // Placeholder
         $row['status'] = 'published'; // Placeholder
@@ -848,15 +941,67 @@ function getUserRecipes($user_uid, $limit = 6) {
 
 function updateUserProfile($user_uid, $fullname, $bio) {
     global $conn;
-    
-    $sql = "UPDATE users SET display_name = ?, created_at = created_at WHERE firebase_uid = ?";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
+
+    $fullname = trim((string)$fullname);
+    $bio = trim((string)$bio);
+
+    $user_id = resolveLocalUserIdFromAuth($user_uid);
+    $email = is_array($user_uid) ? ($user_uid['email'] ?? null) : (is_string($user_uid) && strpos($user_uid, '@') !== false ? $user_uid : null);
+    $uid = is_array($user_uid) ? ($user_uid['uid'] ?? null) : (is_string($user_uid) && strpos($user_uid, '@') === false ? $user_uid : null);
+
+    $sets = [];
+    $types = '';
+    $values = [];
+
+    $nameCols = $conn->query("SHOW COLUMNS FROM users LIKE 'display_name'");
+    if ($nameCols && $nameCols->num_rows > 0) {
+        $sets[] = "display_name = ?";
+        $types .= 's';
+        $values[] = $fullname;
+    }
+
+    $bioCols = $conn->query("SHOW COLUMNS FROM users LIKE 'bio'");
+    if ($bioCols && $bioCols->num_rows > 0) {
+        $sets[] = "bio = ?";
+        $types .= 's';
+        $values[] = $bio;
+    }
+
+    if (count($sets) === 0) {
         return false;
     }
-    
-    $stmt->bind_param('ss', $fullname, $user_uid);
-    return $stmt->execute();
+
+    if ($user_id) {
+        $sql = "UPDATE users SET " . implode(', ', $sets) . " WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) return false;
+        $typesLocal = $types . 'i';
+        $valuesLocal = array_merge($values, [(int)$user_id]);
+        $stmt->bind_param($typesLocal, ...$valuesLocal);
+        return $stmt->execute();
+    }
+
+    if ($email) {
+        $sql = "UPDATE users SET " . implode(', ', $sets) . " WHERE email = ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) return false;
+        $typesLocal = $types . 's';
+        $valuesLocal = array_merge($values, [$email]);
+        $stmt->bind_param($typesLocal, ...$valuesLocal);
+        return $stmt->execute();
+    }
+
+    if ($uid) {
+        $sql = "UPDATE users SET " . implode(', ', $sets) . " WHERE firebase_uid = ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) return false;
+        $typesLocal = $types . 's';
+        $valuesLocal = array_merge($values, [$uid]);
+        $stmt->bind_param($typesLocal, ...$valuesLocal);
+        return $stmt->execute();
+    }
+
+    return false;
 }
 
 function changeUserPassword($user_uid, $current_password, $new_password) {
@@ -905,12 +1050,32 @@ function uploadUserAvatar($user_uid, $file) {
         return ['success' => false, 'error' => 'Gagal mengupload file'];
     }
     
-    // Update database
-    $sql = "UPDATE users SET photo_url = ? WHERE firebase_uid = ?";
-    $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param('ss', $relative_path, $user_uid);
-        $stmt->execute();
+    // Update database (best-effort)
+    $user_id = resolveLocalUserIdFromAuth($user_uid);
+    $email = is_array($user_uid) ? ($user_uid['email'] ?? null) : (is_string($user_uid) && strpos($user_uid, '@') !== false ? $user_uid : null);
+    $uid = is_array($user_uid) ? ($user_uid['uid'] ?? null) : (is_string($user_uid) && strpos($user_uid, '@') === false ? $user_uid : null);
+
+    if ($user_id) {
+        $sql = "UPDATE users SET photo_url = ? WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('si', $relative_path, $user_id);
+            $stmt->execute();
+        }
+    } elseif ($email) {
+        $sql = "UPDATE users SET photo_url = ? WHERE email = ?";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('ss', $relative_path, $email);
+            $stmt->execute();
+        }
+    } elseif ($uid) {
+        $sql = "UPDATE users SET photo_url = ? WHERE firebase_uid = ?";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('ss', $relative_path, $uid);
+            $stmt->execute();
+        }
     }
     
     return ['success' => true, 'path' => $relative_path];

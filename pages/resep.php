@@ -4,6 +4,15 @@ require_once __DIR__ . '/../includes/database.php';
 
 $recipe_id = $_GET['id'] ?? null;
 $search_query = $_GET['search'] ?? '';
+$from = $_GET['from'] ?? '';
+
+// Normalize source for breadcrumb
+$sourceMap = [
+    'home' => ['label' => 'Beranda', 'href' => '?page=home'],
+    'all_resep' => ['label' => 'Resep', 'href' => '?page=all_resep'],
+    'favorit' => ['label' => 'Favorit', 'href' => '?page=favorit']
+];
+$fromKey = isset($sourceMap[$from]) ? $from : '';
 
 // Validate recipe id to avoid invalid queries
 if ($recipe_id && !is_numeric($recipe_id)) {
@@ -96,9 +105,11 @@ $comments = getRecipeComments($recipe_id, 50);
     <div class="container">
         <!-- Breadcrumb -->
         <nav class="breadcrumb">
-            <a href="?page=home"><i class="fas fa-home"></i> Beranda</a>
-            <i class="fas fa-chevron-right"></i>
-            <a href="?page=all_resep&kategori=<?= urlencode($recipe['kategori'] ?? '') ?>"><?= htmlspecialchars($recipe['kategori']) ?></a>
+            <?php if ($fromKey !== ''): ?>
+                <a href="<?= $sourceMap[$fromKey]['href'] ?>"><i class="fas fa-home"></i> <?= $sourceMap[$fromKey]['label'] ?></a>
+            <?php else: ?>
+                <a href="?page=home"><i class="fas fa-home"></i> Beranda</a>
+            <?php endif; ?>
             <i class="fas fa-chevron-right"></i>
             <span class="current"><?= htmlspecialchars($recipe['judul']) ?></span>
         </nav>
@@ -193,30 +204,31 @@ $comments = getRecipeComments($recipe_id, 50);
                         </div>
                     </div>
                     
-                    <!-- Nutrition Info (Placeholder) -->
-                    <div class="sidebar-card nutrition-card">
-                        <h3>Informasi Gizi (per porsi)</h3>
-                        <div class="nutrition-grid">
-                            <div class="nutrition-item">
-                                <span class="nutrition-label">Kalori</span>
-                                <span class="nutrition-value"><?= format_kcal($recipe['kalori'] ?? null) ?></span>
-                            </div>
-                            <div class="nutrition-item">
-                                <span class="nutrition-label">Protein</span>
-                                <span class="nutrition-value"><?= format_gram($recipe['protein'] ?? null) ?></span>
-                            </div>
-                            <div class="nutrition-item">
-                                <span class="nutrition-label">Karbohidrat</span>
-                                <span class="nutrition-value"><?= format_gram($recipe['karbohidrat'] ?? null) ?></span>
-                            </div>
-                            <div class="nutrition-item">
-                                <span class="nutrition-label">Lemak</span>
-                                <span class="nutrition-value"><?= format_gram($recipe['lemak'] ?? null) ?></span>
-                            </div>
-                        </div>
-                        <p class="nutrition-note">* Perkiraan per porsi berdasarkan bahan yang digunakan</p>
+                </div>
+            </div>
+
+            <!-- Nutrition Info (Full Width) -->
+            <div class="sidebar-card nutrition-card nutrition-card-full">
+                <h3>Informasi Gizi (per porsi)</h3>
+                <div class="nutrition-grid">
+                    <div class="nutrition-item">
+                        <span class="nutrition-label"><i class="fas fa-fire"></i> Kalori</span>
+                        <span class="nutrition-value"><?= format_kcal($recipe['kalori'] ?? null) ?></span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label"><i class="fas fa-dumbbell"></i> Protein</span>
+                        <span class="nutrition-value"><?= format_gram($recipe['protein'] ?? null) ?></span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label"><i class="fas fa-bread-slice"></i> Karbohidrat</span>
+                        <span class="nutrition-value"><?= format_gram($recipe['karbohidrat'] ?? null) ?></span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label"><i class="fas fa-tint"></i> Lemak</span>
+                        <span class="nutrition-value"><?= format_gram($recipe['lemak'] ?? null) ?></span>
                     </div>
                 </div>
+                <p class="nutrition-note">* Perkiraan per porsi berdasarkan bahan yang digunakan</p>
             </div>
 
             <!-- Recipe Title and Description -->
@@ -372,7 +384,7 @@ $comments = getRecipeComments($recipe_id, 50);
             <div class="similar-recipes-grid">
                 <?php while ($similar = $similar_recipes->fetch_assoc()): 
                     if ($similar['id'] == $recipe_id) continue; // Skip current recipe
-                    $similar_image = getRecipeImage($similar);
+                    $similar_image = getRecipeImage($similar, 'thumb');
                 ?>
                     <a href="?page=resep&id=<?= $similar['id'] ?>" class="similar-recipe-card">
                         <img src="<?= htmlspecialchars($similar_image) ?>" 
@@ -563,7 +575,7 @@ $comments = getRecipeComments($recipe_id, 50);
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-    height: 400px;
+    height: 430px;
 }
 
 .recipe-main-image img {
@@ -739,33 +751,77 @@ $comments = getRecipeComments($recipe_id, 50);
     color: #2c3e50;
 }
 
+.nutrition-card-full {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
 .nutrition-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 0 0 1rem 0;
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #f0f0f0;
 }
 
 .nutrition-item {
+    flex: 1 1 25%;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    border-left: 4px solid var(--primary);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 14px 16px;
+    background: transparent;
+    border-right: 1px solid #f0f0f0;
+    min-width: 0;
+}
+
+.nutrition-item:last-child {
+    border-right: none;
 }
 
 .nutrition-label {
-    font-size: 0.9rem;
-    color: var(--dark);
-    font-weight: 500;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a8f98;
+    font-weight: 600;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .nutrition-value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ff6b6b;
+    line-height: 1.1;
+}
+
+@media (max-width: 900px) {
+    .nutrition-grid {
+        flex-wrap: wrap;
+    }
+
+    .nutrition-item {
+        flex: 1 1 50%;
+        border-right: 1px solid #f0f0f0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .nutrition-item:nth-child(2) {
+        border-right: none;
+    }
+
+    .nutrition-item:nth-child(3),
+    .nutrition-item:nth-child(4) {
+        border-bottom: none;
+    }
 }
 
 .nutrition-note {

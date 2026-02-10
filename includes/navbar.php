@@ -1,5 +1,28 @@
 <?php
 $current_user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
+if ($current_user && function_exists('hydrateSessionUser')) {
+    $current_user = hydrateSessionUser($current_user);
+    $_SESSION['user'] = $current_user;
+}
+
+function getFirstNameFromUser($user) {
+    $name = '';
+    if (is_array($user)) {
+        $name = trim($user['displayName'] ?? '');
+        if ($name === '') {
+            $name = trim($user['display_name'] ?? '');
+        }
+    }
+    if ($name !== '') {
+        $parts = preg_split('/\s+/', $name);
+        return $parts[0];
+    }
+    $email = is_array($user) ? ($user['email'] ?? '') : '';
+    if ($email && strpos($email, '@') !== false) {
+        return explode('@', $email)[0];
+    }
+    return 'User';
+}
 ?>
 <nav class="navbar">
     <div class="container">
@@ -38,7 +61,7 @@ $current_user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
                         <button class="user-btn">
                             <img src="<?= $current_user['photoURL'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($current_user['displayName'] ?? 'User') ?>" 
                                  alt="User" class="user-avatar">
-                            <span><?= htmlspecialchars($current_user['displayName'] ?? 'User') ?></span>
+                            <span><?= htmlspecialchars(getFirstNameFromUser($current_user)) ?></span>
                             <i class="fas fa-chevron-down"></i>
                         </button>
                         <div class="dropdown-menu">

@@ -170,7 +170,7 @@ if ($favorites->num_rows > 0) {
                         }
                         
                         $total_time = ($recipe['waktu'] ?? 0);
-                        $image_path = getRecipeImage($recipe);
+                        $image_path = getRecipeImage($recipe, 'thumb');
                         $added_date = strtotime($recipe['favorited_at'] ?? $recipe['created_at'] ?? 'now');
                     ?>
                         <div class="recipe-card" 
@@ -180,7 +180,7 @@ if ($favorites->num_rows > 0) {
                              data-time="<?= $total_time ?>"
                              data-added="<?= $added_date ?>">
                             
-                            <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>">
+                            <a class="recipe-image-container" href="?page=resep&id=<?= $recipe['id'] ?>&from=favorit">
                                 <img src="<?= htmlspecialchars($image_path) ?>" 
                                      alt="<?= htmlspecialchars($recipe['judul']) ?>"
                                      loading="lazy">
@@ -196,7 +196,7 @@ if ($favorites->num_rows > 0) {
                             
                             <div class="recipe-content">
                                 <h3 class="recipe-title">
-                                    <a href="?page=resep&id=<?= $recipe['id'] ?>">
+                                    <a href="?page=resep&id=<?= $recipe['id'] ?>&from=favorit">
                                         <?= htmlspecialchars($recipe['judul']) ?>
                                     </a>
                                 </h3>
@@ -224,7 +224,7 @@ if ($favorites->num_rows > 0) {
                                 </div>
                                 
                                 <div class="recipe-actions">
-                                    <a href="?page=resep&id=<?= $recipe['id'] ?>" class="view-btn">
+                                <a href="?page=resep&id=<?= $recipe['id'] ?>&from=favorit" class="view-btn">
                                         <i class="fas fa-eye"></i> Lihat Resep
                                     </a>
                                     <button class="favorite-btn active" data-recipe-id="<?= $recipe['id'] ?>">

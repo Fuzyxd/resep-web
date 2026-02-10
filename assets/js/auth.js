@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
 // Track auth state
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         // User is signed in
         console.log('User signed in:', user.email);
@@ -21,16 +21,31 @@ onAuthStateChanged(auth, (user) => {
         };
         
         // Send to server to store in session
-        fetch('api/auth_session.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userData)
-        });
-        
+        let sessionUser = null;
+        try {
+            const response = await fetch('api/auth_session.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+            const result = await response.json();
+            if (result && result.user) {
+                sessionUser = result.user;
+            }
+        } catch (err) {
+            console.warn('Failed to sync session user', err);
+        }
+
+        const uiUser = sessionUser ? {
+            displayName: sessionUser.displayName || user.displayName,
+            photoURL: sessionUser.photoURL || user.photoURL,
+            email: sessionUser.email || user.email
+        } : user;
+
         // Update UI
-        updateAuthUI(user);
+        updateAuthUI(uiUser);
     } else {
         // User is signed out
         console.log('User signed out');
@@ -43,6 +58,46 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
+function getFirstName(displayName, email) {
+    const name = (displayName || '').trim();
+    if (name) {
+        return name.split(/\s+/)[0];
+    }
+    if (email && email.includes('@')) {
+        return email.split('@')[0];
+    }
+    return 'User';
+}
+
+// Update UI based on auth state
+function updateAuthUI(user) {
+    const authElements = document.querySelectorAll('[data-auth]');
+    
+    authElements.forEach(element => {
+        const authState = element.getAttribute('data-auth');
+        
+        if (authState === 'authenticated') {
+            element.style.display = user ? 'block' : 'none';
+        } else if (authState === 'unauthenticated') {
+            element.style.display = user ? 'none' : 'block';
+        }
+    });
+    
+    // Update user info in navbar
+    if (user) {
+        const userAvatar = document.querySelector('.user-avatar');
+        const userName = document.querySelector('.user-btn span');
+        const nameForAvatar = user.displayName || user.email || 'User';
+        
+        if (userAvatar) {
+            userAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=ff6b6b&color=fff`;
+        }
+        
+        if (userName) {
+            userName.textContent = getFirstName(user.displayName, user.email);
+        }
+    }
+}
 // Login function
 window.loginWithEmail = async function(email, password) {
     try {
@@ -92,35 +147,6 @@ window.logoutUser = async function() {
         };
     }
 };
-
-// Update UI based on auth state
-function updateAuthUI(user) {
-    const authElements = document.querySelectorAll('[data-auth]');
-    
-    authElements.forEach(element => {
-        const authState = element.getAttribute('data-auth');
-        
-        if (authState === 'authenticated') {
-            element.style.display = user ? 'block' : 'none';
-        } else if (authState === 'unauthenticated') {
-            element.style.display = user ? 'none' : 'block';
-        }
-    });
-    
-    // Update user info in navbar
-    if (user) {
-        const userAvatar = document.querySelector('.user-avatar');
-        const userName = document.querySelector('.user-btn span');
-        
-        if (userAvatar) {
-            userAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=ff6b6b&color=fff`;
-        }
-        
-        if (userName) {
-            userName.textContent = user.displayName || 'User';
-        }
-    }
-}
 
 // Initialize auth UI
 document.addEventListener('DOMContentLoaded', function() {

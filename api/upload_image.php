@@ -32,6 +32,74 @@ if (!isset($_FILES['gambar']) || $_FILES['gambar']['error'] !== UPLOAD_ERR_OK) {
 
 $file = $_FILES['gambar'];
 
+function createImageResource($path, $mime) {
+    switch ($mime) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            return @imagecreatefromjpeg($path);
+        case 'image/png':
+            return @imagecreatefrompng($path);
+        case 'image/gif':
+            return @imagecreatefromgif($path);
+        case 'image/webp':
+            return function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false;
+        default:
+            return false;
+    }
+}
+
+function saveImageResource($image, $path, $mime) {
+    switch ($mime) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            return imagejpeg($image, $path, 82);
+        case 'image/png':
+            return imagepng($image, $path, 6);
+        case 'image/gif':
+            return imagegif($image, $path);
+        case 'image/webp':
+            return function_exists('imagewebp') ? imagewebp($image, $path, 82) : false;
+        default:
+            return false;
+    }
+}
+
+function createThumbnail($srcPath, $destPath, $mime, $maxWidth, $maxHeight) {
+    if (!function_exists('imagecreatetruecolor')) {
+        return false;
+    }
+
+    $src = createImageResource($srcPath, $mime);
+    if (!$src) {
+        return false;
+    }
+
+    $width = imagesx($src);
+    $height = imagesy($src);
+    if ($width <= 0 || $height <= 0) {
+        imagedestroy($src);
+        return false;
+    }
+
+    $scale = min($maxWidth / $width, $maxHeight / $height, 1);
+    $newW = max(1, (int)floor($width * $scale));
+    $newH = max(1, (int)floor($height * $scale));
+
+    $thumb = imagecreatetruecolor($newW, $newH);
+    if (in_array($mime, ['image/png', 'image/gif', 'image/webp'], true)) {
+        imagealphablending($thumb, false);
+        imagesavealpha($thumb, true);
+        $transparent = imagecolorallocatealpha($thumb, 0, 0, 0, 127);
+        imagefilledrectangle($thumb, 0, 0, $newW, $newH, $transparent);
+    }
+
+    imagecopyresampled($thumb, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
+    $saved = saveImageResource($thumb, $destPath, $mime);
+    imagedestroy($src);
+    imagedestroy($thumb);
+    return $saved;
+}
+
 // Validate file
 $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 $max_size = 5 * 1024 * 1024; // 5MB
@@ -59,6 +127,15 @@ $filepath = $upload_dir . $filename;
 
 // Move uploaded file
 if (move_uploaded_file($file['tmp_name'], $filepath)) {
+    // Create thumbnail (best-effort)
+    $thumb_dir = '../assets/images/uploads/recipes/thumbs/';
+    if (!is_dir($thumb_dir)) {
+        mkdir($thumb_dir, 0755, true);
+    }
+    $thumb_path = $thumb_dir . $filename;
+    $thumb_relative = 'assets/images/uploads/recipes/thumbs/' . $filename;
+    $thumb_created = createThumbnail($filepath, $thumb_path, $file['type'], 480, 360);
+
     // Update database
     $relative_path = 'assets/images/uploads/recipes/' . $filename;
     
@@ -85,7 +162,8 @@ if (move_uploaded_file($file['tmp_name'], $filepath)) {
         echo json_encode([
             'success' => true,
             'image_url' => $relative_path,
-            'filename' => $filename
+            'filename' => $filename,
+            'thumb_url' => $thumb_created ? $thumb_relative : null
         ]);
     } else {
         // Delete uploaded file if database update fails
