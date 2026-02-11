@@ -41,7 +41,7 @@ if (isset($_SESSION['user'])): ?>
                     <div class="password-input">
                         <input type="password" id="password" name="password" required 
                                placeholder="Minimal 6 karakter" minlength="6">
-                        <button type="button" class="toggle-password">
+                        <button type="button" class="toggle-password" data-toggle-bound="true" onclick="togglePasswordField(this)" aria-label="Tampilkan atau sembunyikan password">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
@@ -61,7 +61,7 @@ if (isset($_SESSION['user'])): ?>
                     <div class="password-input">
                         <input type="password" id="confirmPassword" name="confirmPassword" required 
                                placeholder="Ulangi password">
-                        <button type="button" class="toggle-password">
+                        <button type="button" class="toggle-password" data-toggle-bound="true" onclick="togglePasswordField(this)" aria-label="Tampilkan atau sembunyikan konfirmasi password">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
@@ -72,7 +72,7 @@ if (isset($_SESSION['user'])): ?>
                     <label class="checkbox-label">
                         <input type="checkbox" id="terms" name="terms" required>
                         <span class="checkmark"></span>
-                        Saya setuju dengan <a href="#" class="terms-link">Syarat & Ketentuan</a> dan <a href="#" class="terms-link">Kebijakan Privasi</a>
+                        Saya setuju dengan <a href="?page=terms" class="terms-link" target="_blank" rel="noopener noreferrer">Syarat & Ketentuan</a> dan <a href="?page=privacy" class="terms-link" target="_blank" rel="noopener noreferrer">Kebijakan Privasi</a>
                     </label>
                     <div class="form-error" id="termsError"></div>
                 </div>
@@ -184,6 +184,8 @@ if (isset($_SESSION['user'])): ?>
     cursor: pointer;
     padding: 5px;
     font-size: 1rem;
+    z-index: 2;
+    pointer-events: auto;
 }
 
 .toggle-password:hover {
@@ -381,6 +383,20 @@ if (isset($_SESSION['user'])): ?>
 </style>
 
 <script>
+window.togglePasswordField = function(button) {
+    const input = button.closest('.password-input')?.querySelector('input');
+    if (!input) return;
+
+    const isHidden = input.getAttribute('type') === 'password';
+    input.setAttribute('type', isHidden ? 'text' : 'password');
+
+    const icon = button.querySelector('i');
+    if (icon) {
+        icon.classList.toggle('fa-eye', !isHidden);
+        icon.classList.toggle('fa-eye-slash', isHidden);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const registerForm = document.getElementById('registerForm');
     const authMessage = document.getElementById('authMessage');
@@ -389,18 +405,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const strengthFill = document.getElementById('strengthFill');
     const strengthText = document.getElementById('strengthText');
     const passwordStrength = document.querySelector('.password-strength');
-    
-    // Toggle password visibility
-    const togglePasswordBtns = document.querySelectorAll('.toggle-password');
-    togglePasswordBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const input = this.closest('.password-input').querySelector('input');
-            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-            input.setAttribute('type', type);
-            this.querySelector('i').classList.toggle('fa-eye');
-            this.querySelector('i').classList.toggle('fa-eye-slash');
-        });
-    });
     
     // Password strength checker
     passwordInput.addEventListener('input', function() {
@@ -599,13 +603,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Terms modal (optional)
-    const termsLinks = document.querySelectorAll('.terms-link');
-    termsLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            alert('Syarat & Ketentuan:\n\n1. Data Anda akan disimpan dengan aman\n2. Anda dapat menghapus akun kapan saja\n3. Resep yang difavoritkan akan tersimpan di akun Anda\n\nKebijakan Privasi:\n\n1. Kami tidak membagikan data pribadi Anda\n2. Data hanya digunakan untuk keperluan aplikasi\n3. Anda dapat menghubungi kami untuk pertanyaan privasi');
-        });
-    });
 });
 </script>

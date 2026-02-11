@@ -129,12 +129,13 @@ if ($favorites->num_rows > 0) {
             <div class="filter-controls">
                 <select id="categoryFilter" class="filter-select">
                     <option value="all">Semua Kategori</option>
-                    <option value="Makanan Berat">Makanan Berat</option>
-                    <option value="Makanan Ringan">Makanan Ringan</option>
-                    <option value="Kue & Roti">Kue & Roti</option>
+                    <option value="Makanan Utama">Makanan Utama</option>
+                    <option value="Sup">Sup</option>
+                    <option value="Sayuran">Sayuran</option>
+                    <option value="Snack">Makanan Ringan</option>
+                    <option value="Salad">Salad</option>
+                    <option value="Dessert">Makanan Penutup</option>
                     <option value="Minuman">Minuman</option>
-                    <option value="Sarapan">Sarapan</option>
-                    <option value="Makanan Penutup">Makanan Penutup</option>
                 </select>
                 
                 <select id="difficultyFilter" class="filter-select">
@@ -1214,26 +1215,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalTime = document.getElementById('totalTime');
     
     // Filter functionality
-    searchInput.addEventListener('input', filterFavorites);
+    const normalizeText = (value) => {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/&amp;/g, '&')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+    };
     
-    clearSearch.addEventListener('click', function() {
-        searchInput.value = '';
+    searchInput?.addEventListener('input', filterFavorites);
+    
+    clearSearch?.addEventListener('click', function() {
+        if (searchInput) searchInput.value = '';
         filterFavorites();
         this.style.display = 'none';
     });
     
-    categoryFilter.addEventListener('change', filterFavorites);
-    difficultyFilter.addEventListener('change', filterFavorites);
-    timeFilter.addEventListener('change', filterFavorites);
+    categoryFilter?.addEventListener('change', filterFavorites);
+    difficultyFilter?.addEventListener('change', filterFavorites);
+    timeFilter?.addEventListener('change', filterFavorites);
     
     if (clearAllFilters) {
         clearAllFilters.addEventListener('click', function() {
-            searchInput.value = '';
+            if (searchInput) searchInput.value = '';
             categoryFilter.value = 'all';
             difficultyFilter.value = 'all';
             timeFilter.value = 'all';
             filterFavorites();
-            clearSearch.style.display = 'none';
+            if (clearSearch) clearSearch.style.display = 'none';
         });
     }
     
@@ -1474,10 +1483,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Functions
     function filterFavorites() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const category = categoryFilter.value.toLowerCase();
-        const difficulty = difficultyFilter.value.toLowerCase();
-        const maxTime = timeFilter.value;
+        const searchTerm = normalizeText(searchInput?.value);
+        const category = normalizeText(categoryFilter?.value);
+        const difficulty = normalizeText(difficultyFilter?.value);
+        const maxTime = timeFilter?.value ?? 'all';
         
         if (!favoritesGrid) return;
         
@@ -1485,14 +1494,15 @@ document.addEventListener('DOMContentLoaded', function() {
         let visibleCount = 0;
         
         cards.forEach(card => {
-            const title = card.querySelector('.recipe-title').textContent.toLowerCase();
-            const desc = card.querySelector('.recipe-description').textContent.toLowerCase();
-            const cardCategory = (card.dataset.category || '').toLowerCase().trim();
-            const cardDifficulty = (card.dataset.difficulty || '').toLowerCase().trim();
-            const cardTime = parseInt(card.dataset.time);
+            const title = normalizeText(card.querySelector('.recipe-title')?.textContent);
+            const desc = normalizeText(card.querySelector('.recipe-description')?.textContent);
+            const cardCategory = normalizeText(card.dataset.category);
+            const cardDifficulty = normalizeText(card.dataset.difficulty);
+            const rawTime = parseInt(card.dataset.time, 10);
+            const cardTime = Number.isNaN(rawTime) ? 0 : rawTime;
             
-            const matchesSearch = !searchTerm || 
-                title.includes(searchTerm) || 
+            const matchesSearch = !searchTerm ||
+                title.includes(searchTerm) ||
                 desc.includes(searchTerm);
             
             const matchesCategory = category === 'all' || cardCategory === category;
@@ -1514,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         checkEmptyState(visibleCount);
-        clearSearch.style.display = searchTerm ? 'block' : 'none';
+        if (clearSearch) clearSearch.style.display = searchTerm ? 'block' : 'none';
     }
     
     function sortFavorites(sortBy) {

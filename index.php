@@ -25,7 +25,7 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
     
     <main>
     <?php
-        $allowed_pages = ['home', 'resep', 'favorit', 'profile', 'login', 'register', 'all_resep'];
+        $allowed_pages = ['home', 'resep', 'favorit', 'profile', 'login', 'register', 'all_resep', 'terms', 'privacy'];
         
         if (in_array($page, $allowed_pages)) {
             if ($page == 'home') {
@@ -42,6 +42,10 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                 include 'auth/register.php';
             } elseif ($page == 'all_resep') {
                 include 'pages/all_resep.php';
+            } elseif ($page == 'terms') {
+                include 'pages/terms.php';
+            } elseif ($page == 'privacy') {
+                include 'pages/privacy.php';
             }
         } else {
             include 'pages/home.php';

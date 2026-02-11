@@ -307,18 +307,34 @@ $comments = getRecipeComments($recipe_id, 50);
                             $step_count++;
                     ?>
                             <div class="instruction-step" data-step="<?= $step_count ?>" <?= $step_count === 1 ? '' : 'style="display:none;"' ?>>
-                                <div class="step-number"><?= $step_count ?></div>
                                 <div class="step-content">
                                     <?php
                                         $step_text = trim($cara);
                                         $step_text = preg_replace('/^\s*\d+[\.\)\-]?\s*/', '', $step_text);
                                         $step_text = preg_replace('/\s+/', ' ', $step_text);
+                                        $step_tip = '';
+
+                                        if (preg_match('/\bgoreng\b|di\s*goreng|menggoreng|gorengan/i', $cara)) {
+                                            $step_tip = 'Pastikan api tidak terlalu besar agar tidak gosong.';
+                                        } elseif (preg_match('/\bbakar\b|di\s*bakar|membakar|pembakaran/i', $cara)) {
+                                            $step_tip = 'Balik bahan secara berkala agar matangnya merata dan tidak hangus.';
+                                        } elseif (preg_match('/\bpanggang\b|di\s*panggang|memanggang|oven/i', $cara)) {
+                                            $step_tip = 'Panaskan oven terlebih dahulu agar hasil panggangan matang merata.';
+                                        } elseif (preg_match('/\bpotong\b|iris|cincang|rajang/i', $cara)) {
+                                            $step_tip = 'Potong bahan dengan ukuran seragam agar tingkat kematangan konsisten.';
+                                        } elseif (preg_match('/\btumis\b|menumis/i', $cara)) {
+                                            $step_tip = 'Tumis dengan api sedang sampai bumbu harum, jangan terlalu lama.';
+                                        } elseif (preg_match('/\brebus\b|merebus|didihkan/i', $cara)) {
+                                            $step_tip = 'Gunakan api sedang setelah mendidih agar tekstur bahan tetap baik.';
+                                        } elseif (preg_match('/\bkukus\b|mengukus|dikukus/i', $cara)) {
+                                            $step_tip = 'Pastikan kukusan sudah panas dan tutup rapat agar matang sempurna.';
+                                        }
                                     ?>
                                     <p><?= htmlspecialchars($step_text) ?></p>
-                                    <?php if (preg_match('/\bgoreng\b|di\s*goreng|menggoreng|gorengan/i', $cara)): ?>
+                                    <?php if ($step_tip !== ''): ?>
                                         <div class="step-tip">
                                             <i class="fas fa-lightbulb"></i>
-                                            <strong>Tips:</strong> Pastikan api tidak terlalu besar agar bumbu tidak gosong.
+                                            <strong>Tips:</strong> <?= htmlspecialchars($step_tip) ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -1013,8 +1029,7 @@ $comments = getRecipeComments($recipe_id, 50);
 
 .instruction-step {
     display: grid;
-    grid-template-columns: 46px 1fr;
-    column-gap: 1.5rem;
+    grid-template-columns: 1fr;
     margin-bottom: 2rem;
     padding: 1.5rem 1.6rem;
     background: #fff3f3;
@@ -1036,25 +1051,6 @@ $comments = getRecipeComments($recipe_id, 50);
 .instruction-step.completed {
     background: rgba(46, 213, 115, 0.1);
     border-color: #2ed573;
-}
-
-.step-number {
-    width: 46px;
-    height: 46px;
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    box-shadow: 0 8px 16px rgba(255, 107, 107, 0.25);
-}
-
-.instruction-step.completed .step-number {
-    background: #2ed573;
 }
 
 .step-content {

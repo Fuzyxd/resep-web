@@ -20,9 +20,9 @@ $userRecipes = getUserRecipes($user_id, 6);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_profile'])) {
         $fullname = trim($_POST['fullname'] ?? '');
-        $bio = trim($_POST['bio'] ?? '');
         
-        if (updateUserProfile($user, $fullname, $bio)) {
+        $currentBio = $user['bio'] ?? '';
+        if (updateUserProfile($user, $fullname, $currentBio)) {
             $_SESSION['success_message'] = 'Profil berhasil diperbarui!';
             
             // Refresh user data (fallback to session if DB lookup fails)
@@ -33,9 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user']['email'] = $fresh['email'] ?? ($_SESSION['user']['email'] ?? null);
             } else {
                 $_SESSION['user']['displayName'] = $fullname !== '' ? $fullname : ($_SESSION['user']['displayName'] ?? null);
-                if ($bio !== '') {
-                    $_SESSION['user']['bio'] = $bio;
-                }
             }
             
             header('Location: ?page=profile');
@@ -134,13 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?= $userStats['total_favorites'] ?? 0 ?> Favorit
                     </p>
                     
-                    <?php if (!empty($user['bio'])): ?>
-                        <p class="profile-bio">
-                            <i class="fas fa-quote-left"></i>
-                            <?= htmlspecialchars($user['bio']) ?>
-                        </p>
-                    <?php endif; ?>
-                    
                     <div class="profile-join-date">
                         <i class="fas fa-calendar-alt"></i>
                         Bergabung <?= date('d M Y', strtotime($user['created_at'] ?? 'now')) ?>
@@ -185,17 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                        disabled
                                        class="form-control disabled">
                                 <small class="form-text">Email tidak dapat diubah</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="bio">
-                                    <i class="fas fa-quote-right"></i> Bio
-                                </label>
-                                <textarea id="bio" 
-                                          name="bio" 
-                                          rows="3"
-                                          placeholder="Ceritakan sedikit tentang diri Anda..."
-                                          class="form-control"><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
                             </div>
                             
                             <button type="submit" name="update_profile" class="btn btn-primary">
@@ -628,19 +607,9 @@ document.addEventListener('keydown', function(event) {
 }
 
 .profile-email i,
-.profile-bio i,
 .profile-join-date i {
     margin-right: 0.5rem;
     width: 20px;
-}
-
-.profile-bio {
-    font-style: italic;
-    margin: 1rem 0;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
 }
 
 .profile-join-date {

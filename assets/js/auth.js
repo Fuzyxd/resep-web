@@ -163,6 +163,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle password visibility
     const togglePasswordBtns = document.querySelectorAll('.toggle-password');
     togglePasswordBtns.forEach(btn => {
+        if (btn.dataset.toggleBound === 'true') {
+            return;
+        }
         btn.addEventListener('click', function() {
             const input = this.previousElementSibling;
             const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -170,5 +173,6 @@ document.addEventListener('DOMContentLoaded', function() {
             this.querySelector('i').classList.toggle('fa-eye');
             this.querySelector('i').classList.toggle('fa-eye-slash');
         });
+        btn.dataset.toggleBound = 'true';
     });
 });
