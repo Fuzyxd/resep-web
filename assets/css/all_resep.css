@@ -306,8 +306,10 @@
 }
 /* Match card sizing with favorit page */
 .recipe-grid {
+    display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 2rem;
+    column-gap: 1.5rem;
+    row-gap: 1.5rem;
 }
 
 .recipe-card {
@@ -317,4 +319,19 @@
 
 .recipe-image-container {
     height: 200px;
+}
+
+@media (max-width: 992px) {
+    .recipe-grid {
+        column-gap: 1.25rem;
+        row-gap: 1.25rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .recipe-grid {
+        grid-template-columns: 1fr;
+        column-gap: 1rem;
+        row-gap: 1rem;
+    }
 }

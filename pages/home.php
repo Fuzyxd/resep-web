@@ -203,7 +203,7 @@
         function performSearch() {
             const query = heroSearch.value.trim();
             if (query) {
-                window.location.href = `?page=resep&search=${encodeURIComponent(query)}`;
+                window.location.href = `?page=all_resep&q=${encodeURIComponent(query)}`;
             } else {
                 heroSearch.focus();
             }

@@ -47,10 +47,101 @@ if (isset($_SESSION['user'])) {
 }
 
 // Parse bahan dan langkah (DB uses langkah with \n)
-$bahan_list = preg_split("/\\r?\\n/", $recipe['bahan'] ?? '');
+$bahan_raw = (string)($recipe['bahan'] ?? '');
+$bahan_raw = str_replace('/n', "\n", $bahan_raw);
+
+if (preg_match("/\\r?\\n/", $bahan_raw)) {
+    $bahan_list = preg_split("/\\r?\\n/", $bahan_raw);
+} elseif (preg_match('/\\d+\\s*[\\.)]/', $bahan_raw)) {
+    // Support format single-line like: "1.Nasi putih 2.Telur 3.Garam"
+    $bahan_list = preg_split('/\\s*(?=\\d+\\s*[\\.)])/', trim($bahan_raw));
+    $bahan_list = array_map(function ($item) {
+        return preg_replace('/^\\d+\\s*[\\.)]\\s*/', '', trim($item));
+    }, $bahan_list);
+} elseif (strpos($bahan_raw, ',') !== false || strpos($bahan_raw, ';') !== false) {
+    // Split by comma/semicolon, but keep delimiters inside parentheses intact.
+    // Example kept as one item: "Bawang goreng: 1 sdm (opsional, untuk topping)"
+    $bahan_list = preg_split('/\\s*[,;](?![^()]*\\))\\s*/', trim($bahan_raw));
+} else {
+    $bahan_list = [$bahan_raw];
+}
+
+$bahan_list = array_values(array_filter(array_map('trim', $bahan_list), function ($item) {
+    return $item !== '';
+}));
+
 $langkah_raw = $recipe['langkah'] ?? ($recipe['cara_masak'] ?? '');
 $langkah_raw = str_replace('/n', "\n", $langkah_raw);
-$cara_masak_list = preg_split("/\\r?\\n/", $langkah_raw);
+$langkah_lines = preg_split("/\\r?\\n/", $langkah_raw);
+$cara_masak_sections = [];
+$current_section_index = -1;
+
+foreach ($langkah_lines as $raw_line) {
+    $line = trim((string)$raw_line);
+    if ($line === '') {
+        continue;
+    }
+
+    $line = preg_replace('/\s+/', ' ', $line);
+
+    // Header section, e.g: "1. PERSIAPAN BAHAN:"
+    if (
+        preg_match('/^\s*(?:\d+\s*[\.)]\s*)?(.+?)\s*:\s*$/u', $line, $matches) &&
+        !preg_match('/^\s*[-*]\s+/', $line)
+    ) {
+        $title = trim($matches[1]);
+        if ($title === '') {
+            $title = 'Langkah';
+        }
+
+        $cara_masak_sections[] = [
+            'title' => $title,
+            'items' => []
+        ];
+        $current_section_index = count($cara_masak_sections) - 1;
+        continue;
+    }
+
+    // Bullet under current section
+    if (preg_match('/^\s*[-*]\s*(.+)$/u', $line, $matches)) {
+        if ($current_section_index < 0) {
+            $cara_masak_sections[] = [
+                'title' => 'Langkah Memasak',
+                'items' => []
+            ];
+            $current_section_index = count($cara_masak_sections) - 1;
+        }
+
+        $cara_masak_sections[$current_section_index]['items'][] = trim($matches[1]);
+        continue;
+    }
+
+    // Numbered line without section header, e.g: "3. Aduk rata ..."
+    if (preg_match('/^\s*\d+\s*[\.)]\s*(.+)$/u', $line, $matches)) {
+        $cara_masak_sections[] = [
+            'title' => 'Langkah ' . (count($cara_masak_sections) + 1),
+            'items' => [trim($matches[1])]
+        ];
+        $current_section_index = count($cara_masak_sections) - 1;
+        continue;
+    }
+
+    // Plain text fallback
+    if ($current_section_index < 0) {
+        $cara_masak_sections[] = [
+            'title' => 'Langkah Memasak',
+            'items' => []
+        ];
+        $current_section_index = count($cara_masak_sections) - 1;
+    }
+    $cara_masak_sections[$current_section_index]['items'][] = $line;
+}
+
+$cara_masak_sections = array_values(array_filter($cara_masak_sections, function ($section) {
+    $items = isset($section['items']) && is_array($section['items']) ? array_filter(array_map('trim', $section['items'])) : [];
+    $title = trim((string)($section['title'] ?? ''));
+    return $title !== '' || !empty($items);
+}));
 
 // Get similar recipes
 $similar_recipes = getRecipesByCategory($recipe['kategori'], 3);
@@ -295,42 +386,60 @@ $comments = getRecipeComments($recipe_id, 50);
                 <div class="section-header-row">
                     <h2><i class="fas fa-mortar-pestle"></i> Cara Membuat</h2>
                     <div class="step-counter">
-                        <span id="currentStep">1</span> / <span id="totalSteps"><?= count(array_filter($cara_masak_list)) ?></span> Langkah
+                        <span id="currentStep">1</span> / <span id="totalSteps"><?= count($cara_masak_sections) ?></span> Langkah
+                        <span class="step-progress-dot">&bull;</span>
+                        Selesai <span id="completedSteps">0</span>
                     </div>
                 </div>
                 
                 <div class="instructions-list" id="instructionsList">
                     <?php 
                     $step_count = 0;
-                    foreach ($cara_masak_list as $index => $cara): 
-                        if (trim($cara)): 
+                    foreach ($cara_masak_sections as $section): 
+                        $section_items = array_values(array_filter(array_map('trim', $section['items'] ?? [])));
+                        if (!empty($section_items)): 
                             $step_count++;
+                            $section_title = trim((string)($section['title'] ?? ('Langkah ' . $step_count)));
+                            $tip_source = $section_title . ' ' . implode(' ', $section_items);
                     ?>
-                            <div class="instruction-step" data-step="<?= $step_count ?>" <?= $step_count === 1 ? '' : 'style="display:none;"' ?>>
+                            <div class="instruction-step" data-step="<?= $step_count ?>">
+                                <div class="step-header">
+                                    <span class="step-badge"><?= htmlspecialchars($section_title) ?></span>
+                                    <label class="step-done-toggle" for="step-done-<?= $step_count ?>">
+                                        <input
+                                            type="checkbox"
+                                            id="step-done-<?= $step_count ?>"
+                                            class="step-done-checkbox"
+                                            data-step="<?= $step_count ?>"
+                                        >
+                                        <span>Tandai selesai</span>
+                                    </label>
+                                </div>
                                 <div class="step-content">
                                     <?php
-                                        $step_text = trim($cara);
-                                        $step_text = preg_replace('/^\s*\d+[\.\)\-]?\s*/', '', $step_text);
-                                        $step_text = preg_replace('/\s+/', ' ', $step_text);
                                         $step_tip = '';
 
-                                        if (preg_match('/\bgoreng\b|di\s*goreng|menggoreng|gorengan/i', $cara)) {
+                                        if (preg_match('/\bgoreng\b|di\s*goreng|menggoreng|gorengan/i', $tip_source)) {
                                             $step_tip = 'Pastikan api tidak terlalu besar agar tidak gosong.';
-                                        } elseif (preg_match('/\bbakar\b|di\s*bakar|membakar|pembakaran/i', $cara)) {
+                                        } elseif (preg_match('/\bbakar\b|di\s*bakar|membakar|pembakaran/i', $tip_source)) {
                                             $step_tip = 'Balik bahan secara berkala agar matangnya merata dan tidak hangus.';
-                                        } elseif (preg_match('/\bpanggang\b|di\s*panggang|memanggang|oven/i', $cara)) {
+                                        } elseif (preg_match('/\bpanggang\b|di\s*panggang|memanggang|oven/i', $tip_source)) {
                                             $step_tip = 'Panaskan oven terlebih dahulu agar hasil panggangan matang merata.';
-                                        } elseif (preg_match('/\bpotong\b|iris|cincang|rajang/i', $cara)) {
+                                        } elseif (preg_match('/\bpotong\b|iris|cincang|rajang/i', $tip_source)) {
                                             $step_tip = 'Potong bahan dengan ukuran seragam agar tingkat kematangan konsisten.';
-                                        } elseif (preg_match('/\btumis\b|menumis/i', $cara)) {
+                                        } elseif (preg_match('/\btumis\b|menumis/i', $tip_source)) {
                                             $step_tip = 'Tumis dengan api sedang sampai bumbu harum, jangan terlalu lama.';
-                                        } elseif (preg_match('/\brebus\b|merebus|didihkan/i', $cara)) {
+                                        } elseif (preg_match('/\brebus\b|merebus|didihkan/i', $tip_source)) {
                                             $step_tip = 'Gunakan api sedang setelah mendidih agar tekstur bahan tetap baik.';
-                                        } elseif (preg_match('/\bkukus\b|mengukus|dikukus/i', $cara)) {
+                                        } elseif (preg_match('/\bkukus\b|mengukus|dikukus/i', $tip_source)) {
                                             $step_tip = 'Pastikan kukusan sudah panas dan tutup rapat agar matang sempurna.';
                                         }
                                     ?>
-                                    <p><?= htmlspecialchars($step_text) ?></p>
+                                    <ul class="step-points">
+                                        <?php foreach ($section_items as $item): ?>
+                                            <li><?= htmlspecialchars($item) ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
                                     <?php if ($step_tip !== ''): ?>
                                         <div class="step-tip">
                                             <i class="fas fa-lightbulb"></i>
@@ -338,20 +447,11 @@ $comments = getRecipeComments($recipe_id, 50);
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="step-actions"></div>
                             </div>
                         <?php endif;
                     endforeach; ?>
                 </div>
                 
-                <div class="instructions-actions">
-                    <button class="btn btn-outline" id="prevStep">
-                        <i class="fas fa-chevron-left"></i> Sebelumnya
-                    </button>
-                    <button class="btn btn-primary" id="nextStep">
-                        Selanjutnya <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -933,15 +1033,45 @@ $comments = getRecipeComments($recipe_id, 50);
 .step-counter {
     background: var(--primary);
     color: white;
-    padding: 8px 15px;
+    padding: 8px 14px;
     border-radius: 20px;
     font-weight: 600;
     font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.step-progress-dot {
+    opacity: 0.75;
 }
 
 /* Ingredients List */
 .ingredients-list {
     margin-bottom: 1.5rem;
+    max-height: min(52vh, 560px);
+    overflow-y: auto;
+    padding-right: 0.35rem;
+    scroll-behavior: smooth;
+}
+
+.ingredients-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ingredients-list::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 999px;
+}
+
+.ingredients-list::-webkit-scrollbar-thumb {
+    background: #d6d9de;
+    border-radius: 999px;
+}
+
+.ingredients-list::-webkit-scrollbar-thumb:hover {
+    background: #c0c5cc;
 }
 
 .ingredient-item {
@@ -1025,18 +1155,40 @@ $comments = getRecipeComments($recipe_id, 50);
 /* Instructions Section */
 .instructions-list {
     margin-bottom: 2rem;
+    max-height: min(68vh, 760px);
+    overflow-y: auto;
+    padding-right: 0.45rem;
+    scroll-behavior: smooth;
+}
+
+.instructions-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.instructions-list::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 999px;
+}
+
+.instructions-list::-webkit-scrollbar-thumb {
+    background: #d6d9de;
+    border-radius: 999px;
+}
+
+.instructions-list::-webkit-scrollbar-thumb:hover {
+    background: #c0c5cc;
 }
 
 .instruction-step {
     display: grid;
     grid-template-columns: 1fr;
-    margin-bottom: 2rem;
-    padding: 1.5rem 1.6rem;
-    background: #fff3f3;
+    margin-bottom: 1rem;
+    padding: 1.3rem 1.4rem;
+    background: #ffffff;
     border-radius: 18px;
-    border-left: 6px solid var(--primary);
+    border: 1px solid #f0d7d7;
+    border-left: 5px solid #f2b3b3;
     transition: all 0.3s ease;
-    align-items: center;
 }
 
 .instruction-step:last-child {
@@ -1044,13 +1196,59 @@ $comments = getRecipeComments($recipe_id, 50);
 }
 
 .instruction-step:hover {
-    transform: translateX(5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.07);
 }
 
 .instruction-step.completed {
     background: rgba(46, 213, 115, 0.1);
-    border-color: #2ed573;
+    border-color: rgba(46, 213, 115, 0.35);
+    border-left-color: #2ed573;
+}
+
+.instruction-step.active {
+    border-color: rgba(255, 107, 107, 0.45);
+    border-left-color: var(--primary);
+    box-shadow: 0 10px 22px rgba(255, 107, 107, 0.18);
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
+    margin-bottom: 0.85rem;
+}
+
+.step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 107, 107, 0.12);
+    color: var(--primary);
+    font-size: 0.86rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.step-done-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: #596275;
+    cursor: pointer;
+    user-select: none;
+}
+
+.step-done-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: #2ed573;
 }
 
 .step-content {
@@ -1064,7 +1262,20 @@ $comments = getRecipeComments($recipe_id, 50);
     font-size: 1.05rem;
 }
 
+.step-points {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.step-points li {
+    color: var(--dark);
+    line-height: 1.55;
+}
+
 .step-tip {
+    margin-top: 0.8rem;
     background: rgba(255, 165, 2, 0.1);
     border-left: 3px solid #ffa502;
     padding: 10px 15px;
@@ -1075,42 +1286,6 @@ $comments = getRecipeComments($recipe_id, 50);
 
 .step-tip i {
     margin-right: 8px;
-}
-
-.step-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.step-btn {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.3s ease;
-}
-
-.note-btn {
-    background: rgba(52, 152, 219, 0.1);
-    color: #3498db;
-}
-
-.note-btn:hover {
-    background: rgba(52, 152, 219, 0.2);
-}
-
-.instructions-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 /* Tips Section */
@@ -1576,13 +1751,16 @@ $comments = getRecipeComments($recipe_id, 50);
         gap: 1rem;
     }
     
-    .instructions-actions {
-        flex-direction: column;
-        gap: 10px;
+    .instructions-list {
+        max-height: min(60vh, 520px);
     }
     
     .ingredients-actions {
         flex-direction: column;
+    }
+
+    .ingredients-list {
+        max-height: min(46vh, 420px);
     }
 
     .comment-login {
@@ -1611,13 +1789,17 @@ $comments = getRecipeComments($recipe_id, 50);
     }
     
     .instruction-step {
-        flex-direction: column;
-        gap: 1rem;
+        padding: 1.1rem 1rem;
     }
-    
-    .step-actions {
-        flex-direction: row;
-        justify-content: flex-start;
+
+    .instructions-list {
+        max-height: min(58vh, 460px);
+    }
+
+    .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.55rem;
     }
     
     .share-link {
@@ -1646,12 +1828,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const shareOptions = document.querySelectorAll('.share-option');
     const copyLinkBtn = document.getElementById('copyLink');
     const shareUrlInput = document.getElementById('shareUrl');
+    const completedStepsSpan = document.getElementById('completedSteps');
+    const stepDoneCheckboxes = document.querySelectorAll('.step-done-checkbox');
     
     // State
-    let currentStep = 1;
-    const totalSteps = parseInt(totalStepsSpan.textContent);
+    const totalSteps = Number.parseInt(totalStepsSpan?.textContent || '0', 10);
+    let currentStep = totalSteps > 0 ? 1 : 0;
     
     // Initialize
+    updateCompletedSteps();
     updateStepNavigation();
     highlightCurrentStep();
     
@@ -1801,6 +1986,26 @@ document.addEventListener('DOMContentLoaded', function() {
             updateStepNavigation();
             highlightCurrentStep();
             scrollToStep(currentStep);
+        } else if (totalSteps > 0) {
+            showToast('Selamat! Anda telah menyelesaikan semua langkah.');
+        }
+    });
+
+    stepDoneCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateCompletedSteps();
+        });
+    });
+
+    instructionsList?.addEventListener('click', function(e) {
+        const stepElement = e.target.closest('.instruction-step');
+        if (!stepElement) return;
+
+        const step = Number.parseInt(stepElement.dataset.step || '0', 10);
+        if (Number.isFinite(step) && step > 0) {
+            currentStep = step;
+            updateStepNavigation();
+            highlightCurrentStep();
         }
     });
     
@@ -1852,6 +2057,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Keyboard navigation for steps
     document.addEventListener('keydown', function(e) {
+        const targetTag = (e.target?.tagName || '').toLowerCase();
+        if (targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select') {
+            return;
+        }
+
         if (e.key === 'ArrowLeft' && currentStep > 1) {
             currentStep--;
             updateStepNavigation();
@@ -1867,43 +2077,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Functions
     function updateStepNavigation() {
-        currentStepSpan.textContent = currentStep;
-        prevStepBtn.disabled = currentStep === 1;
-        nextStepBtn.disabled = currentStep === totalSteps;
-        showOnlyStep(currentStep);
-        
+        if (currentStepSpan) {
+            currentStepSpan.textContent = currentStep > 0 ? currentStep : 0;
+        }
+
         if (prevStepBtn) {
-            prevStepBtn.innerHTML = prevStepBtn.disabled 
-                ? '<i class="fas fa-chevron-left"></i> Sebelumnya'
-                : '<i class="fas fa-chevron-left"></i> Sebelumnya';
+            prevStepBtn.disabled = currentStep <= 1;
+            prevStepBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Sebelumnya';
         }
         
         if (nextStepBtn) {
-            nextStepBtn.innerHTML = nextStepBtn.disabled 
+            const isLastStep = totalSteps > 0 && currentStep >= totalSteps;
+            nextStepBtn.innerHTML = isLastStep
                 ? 'Selesai <i class="fas fa-chevron-right"></i>'
                 : 'Selanjutnya <i class="fas fa-chevron-right"></i>';
-            
-            if (nextStepBtn.disabled) {
-                nextStepBtn.addEventListener('click', function() {
-                    showToast('Selamat! Anda telah menyelesaikan semua langkah.');
-                });
-            }
         }
     }
     
     function highlightCurrentStep() {
-        // Remove highlight from all steps
         document.querySelectorAll('.instruction-step').forEach(step => {
-            step.style.background = '#f8f9fa';
-            step.style.borderColor = 'var(--primary)';
+            step.classList.remove('active');
         });
         
-        // Highlight current step
+        if (currentStep <= 0) return;
         const currentStepElement = document.querySelector(`.instruction-step[data-step="${currentStep}"]`);
         if (currentStepElement) {
-            currentStepElement.style.display = 'block';
-            currentStepElement.style.background = 'rgba(255, 107, 107, 0.1)';
-            currentStepElement.style.borderColor = 'var(--primary)';
+            currentStepElement.classList.add('active');
         }
     }
     
@@ -1917,9 +2116,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function showOnlyStep(step) {
-        document.querySelectorAll('.instruction-step').forEach(el => {
-            el.style.display = (parseInt(el.dataset.step) === step) ? 'block' : 'none';
+    function updateCompletedSteps() {
+        const completedCount = document.querySelectorAll('.step-done-checkbox:checked').length;
+
+        if (completedStepsSpan) {
+            completedStepsSpan.textContent = completedCount;
+        }
+
+        document.querySelectorAll('.instruction-step').forEach(step => {
+            const checkbox = step.querySelector('.step-done-checkbox');
+            step.classList.toggle('completed', !!checkbox?.checked);
         });
     }
     

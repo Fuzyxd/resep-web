@@ -49,9 +49,22 @@ function getFirstNameFromUser($user) {
                 </a></li>
                 <?php endif; ?>
                 
-                <li class="search-box">
-                    <input type="text" id="searchInput" placeholder="Cari resep...">
-                    <button id="searchButton"><i class="fas fa-search"></i></button>
+                <li class="search-box" id="navbarSearch">
+                    <button class="search-toggle" id="navbarSearchToggle" type="button" aria-label="Buka pencarian">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <form class="navbar-search-form" method="get" action="">
+                        <input type="hidden" name="page" value="all_resep">
+                        <input type="text"
+                               id="searchInput"
+                               name="q"
+                               value="<?= htmlspecialchars($_GET['q'] ?? '') ?>"
+                               placeholder="Cari Resep"
+                               aria-label="Cari resep">
+                        <button id="searchButton" type="submit" aria-label="Cari">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
                 </li>
             </ul>
             
