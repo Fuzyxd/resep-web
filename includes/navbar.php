@@ -4,6 +4,12 @@ if ($current_user && function_exists('hydrateSessionUser')) {
     $current_user = hydrateSessionUser($current_user);
     $_SESSION['user'] = $current_user;
 }
+$current_user_email = is_array($current_user) ? strtolower(trim((string)($current_user['email'] ?? ''))) : '';
+$admin_emails = [
+    'rayhanfuzy@gmail.com',
+    'andromedafap01@gmail.com'
+];
+$can_access_input = in_array($current_user_email, $admin_emails, true);
 
 function getFirstNameFromUser($user) {
     $name = '';
@@ -80,6 +86,9 @@ function getFirstNameFromUser($user) {
                         <div class="dropdown-menu">
                             <a href="?page=profile"><i class="fas fa-user"></i> Profil</a>
                             <a href="?page=favorit"><i class="fas fa-heart"></i> Favorit</a>
+                            <?php if ($can_access_input): ?>
+                                <a href="?page=input"><i class="fas fa-pen-to-square"></i> Input</a>
+                            <?php endif; ?>
                             <div class="divider"></div>
                             <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
                         </div>

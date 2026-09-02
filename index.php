@@ -17,6 +17,9 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
     <?php if ($page === 'profile'): ?>
         <link rel="stylesheet" href="assets/css/profile.css">
     <?php endif; ?>
+    <?php if ($page === 'input'): ?>
+        <link rel="stylesheet" href="assets/css/input.css?v=<?= filemtime(__DIR__ . '/assets/css/input.css') ?>">
+    <?php endif; ?>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -25,7 +28,7 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
     
     <main>
     <?php
-        $allowed_pages = ['home', 'resep', 'favorit', 'profile', 'login', 'register', 'all_resep', 'terms', 'privacy'];
+        $allowed_pages = ['home', 'resep', 'favorit', 'profile', 'login', 'register', 'all_resep', 'terms', 'privacy', 'input'];
         
         if (in_array($page, $allowed_pages)) {
             if ($page == 'home') {
@@ -46,6 +49,8 @@ $page = isset($_GET['page']) ? $_GET['page'] : 'home';
                 include 'pages/terms.php';
             } elseif ($page == 'privacy') {
                 include 'pages/privacy.php';
+            } elseif ($page == 'input') {
+                include 'pages/input.php';
             }
         } else {
             include 'pages/home.php';

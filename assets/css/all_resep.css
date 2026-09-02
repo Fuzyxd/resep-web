@@ -14,6 +14,29 @@
     margin-bottom: 2rem;
 }
 
+.admin-recipe-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+
+.admin-recipe-notice.is-success {
+    background: #f0fff6;
+    border-color: #bde8cd;
+    color: #1d7c4a;
+}
+
+.admin-recipe-notice.is-error {
+    background: #fff3f3;
+    border-color: #ffd3d3;
+    color: #b14545;
+}
+
 .all-resep-title {
     font-family: 'Playfair Display', serif;
     font-size: 2.6rem;
@@ -44,6 +67,7 @@
     outline: none;
     width: 100%;
     font-size: 1rem;
+    min-width: 0;
 }
 
 .all-resep-search button {
@@ -274,6 +298,7 @@
     align-items: center;
     width: 100%;
     justify-content: space-between;
+    flex-wrap: nowrap;
 }
 
 .recipe-meta.actions-row {
@@ -304,10 +329,37 @@
 .favorite-btn:hover {
     background: rgba(255, 107, 107, 0.1);
 }
+
+.delete-recipe-form {
+    margin: 0;
+}
+
+.delete-recipe-btn {
+    width: 40px;
+    height: 40px;
+    background: #fff1f1;
+    border: 1px solid #ffcece;
+    color: #d74444;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.delete-recipe-btn:hover {
+    background: #d74444;
+    border-color: #d74444;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
 /* Match card sizing with favorit page */
 .recipe-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     column-gap: 1.5rem;
     row-gap: 1.5rem;
 }
@@ -333,5 +385,30 @@
         grid-template-columns: 1fr;
         column-gap: 1rem;
         row-gap: 1rem;
+    }
+
+    .all-resep-search {
+        flex-direction: column;
+        align-items: stretch;
+        border-radius: 16px;
+        padding: 0.8rem;
+    }
+
+    .all-resep-search button {
+        width: 100%;
+    }
+
+    .recipe-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .view-btn {
+        width: 100%;
+    }
+
+    .favorite-btn,
+    .delete-recipe-btn {
+        margin-left: 0;
     }
 }

@@ -23,12 +23,14 @@ body {
     color: var(--dark);
     background-color: var(--light);
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    width: 100%;
+    padding: 0 clamp(14px, 3vw, 20px);
 }
 
 /* Typography */
@@ -60,6 +62,32 @@ p {
 a {
     text-decoration: none;
     color: inherit;
+}
+
+img,
+video,
+svg {
+    max-width: 100%;
+    height: auto;
+}
+
+input,
+select,
+textarea,
+button {
+    max-width: 100%;
+}
+
+main,
+section,
+div,
+p,
+h1,
+h2,
+h3,
+h4,
+h5 {
+    overflow-wrap: break-word;
 }
 
 
@@ -177,10 +205,11 @@ a {
 /* Responsive */
 @media (max-width: 768px) {
     .container {
+        padding: 0 15px;
+    }
+
     .section-title {
         font-size: 2rem;
-    }
-        padding: 0 15px;
     }
     
     h1 {

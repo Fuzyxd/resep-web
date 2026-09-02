@@ -34,7 +34,7 @@
 
 .hero-title {
     font-family: 'Playfair Display', serif;
-    font-size: 3.8rem;
+    font-size: clamp(2rem, 5vw, 3.8rem);
     font-weight: 800;
     line-height: 1.1;
     margin-bottom: 1rem;
@@ -46,7 +46,7 @@
 }
 
 .hero-subtitle {
-    font-size: 1.3rem;
+    font-size: clamp(1rem, 2.1vw, 1.3rem);
     color: var(--dark);
     opacity: 0.8;
     margin-bottom: 2rem;
@@ -97,7 +97,7 @@
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
     border: none;
-    padding: 0 35px;
+    padding: 0 30px;
     border-radius: 60px;
     font-weight: 600;
     font-size: 1.1rem;
@@ -276,7 +276,7 @@
 
 .recipe-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 2.5rem;
     margin-top: 3rem;
 }
@@ -346,6 +346,7 @@
 
 .recipe-content {
     padding: 1.8rem;
+    min-width: 0;
 }
 
 .recipe-title {
@@ -441,6 +442,7 @@
     align-items: center;
     width: 100%;
     justify-content: space-between;
+    flex-wrap: nowrap;
 }
 
 .favorite-btn {
@@ -499,6 +501,7 @@
     transition: all 0.3s ease;
     text-decoration: none;
     font-size: 0.95rem;
+    min-width: 0;
 }
 
 .view-btn:hover {
@@ -657,7 +660,7 @@
     }
     
     .recipe-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     }
 }
 
@@ -706,6 +709,7 @@
         border-radius: 0 0 20px 20px;
         padding: 20px;
         justify-content: center;
+        width: 100%;
     }
     
     .hero-stats {
@@ -730,6 +734,14 @@
         grid-template-columns: 1fr;
         gap: 2rem;
     }
+
+    .recipe-actions {
+        gap: 8px;
+    }
+
+    .favorite-btn {
+        margin-left: 0;
+    }
     
     .categories-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -746,6 +758,27 @@
     }
 .stat-number {
         font-size: 2rem;
+    }
+
+    .recipe-content {
+        padding: 1.1rem;
+    }
+
+    .recipe-meta {
+        grid-template-columns: 1fr !important;
+        row-gap: 8px;
+    }
+
+    .difficulty-badge {
+        justify-self: start;
+    }
+
+    .recipe-actions {
+        flex-wrap: wrap;
+    }
+
+    .view-btn {
+        width: 100%;
     }
     
     .categories-grid {

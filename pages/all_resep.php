@@ -1,6 +1,82 @@
 <?php
 require_once __DIR__ . '/../includes/database.php';
 
+$currentUser = $_SESSION['user'] ?? null;
+if ($currentUser && function_exists('hydrateSessionUser')) {
+    $currentUser = hydrateSessionUser($currentUser);
+    $_SESSION['user'] = $currentUser;
+}
+$currentEmail = is_array($currentUser) ? strtolower(trim((string)($currentUser['email'] ?? ''))) : '';
+$adminEmails = [
+    'rayhanfuzy@gmail.com',
+    'andromedafap01@gmail.com'
+];
+$isAdmin = in_array($currentEmail, $adminEmails, true);
+
+if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_recipe_id'])) {
+    $deleteId = (int)($_POST['delete_recipe_id'] ?? 0);
+    $deleteError = '';
+    $deletedTitle = '';
+    $localImagePath = '';
+
+    if ($deleteId <= 0) {
+        $deleteError = 'ID resep tidak valid.';
+    } else {
+        $stmt = $conn->prepare("SELECT judul, gambar_url FROM resep WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            $deleteError = 'Gagal menyiapkan query pengambilan data resep.';
+        } else {
+            $stmt->bind_param("i", $deleteId);
+            $stmt->execute();
+            $recipeResult = $stmt->get_result();
+            $recipeRow = $recipeResult ? $recipeResult->fetch_assoc() : null;
+            if (!$recipeRow) {
+                $deleteError = 'Resep tidak ditemukan atau sudah dihapus.';
+            } else {
+                $deletedTitle = (string)($recipeRow['judul'] ?? '');
+                $imageValue = (string)($recipeRow['gambar_url'] ?? '');
+                if (strpos($imageValue, 'assets/images/uploads/recipes/') === 0) {
+                    $localImagePath = __DIR__ . '/../' . ltrim($imageValue, '/\\');
+                }
+
+                $deleteStmt = $conn->prepare("DELETE FROM resep WHERE id = ? LIMIT 1");
+                if (!$deleteStmt) {
+                    $deleteError = 'Gagal menyiapkan query hapus resep.';
+                } else {
+                    $deleteStmt->bind_param("i", $deleteId);
+                    if (!$deleteStmt->execute()) {
+                        $deleteError = 'Gagal menghapus resep dari database.';
+                    } elseif ($deleteStmt->affected_rows < 1) {
+                        $deleteError = 'Resep tidak ditemukan saat proses hapus.';
+                    }
+                }
+            }
+        }
+    }
+
+    if ($deleteError === '' && $localImagePath !== '') {
+        if (file_exists($localImagePath)) {
+            @unlink($localImagePath);
+        }
+        $thumbPath = __DIR__ . '/../assets/images/uploads/recipes/thumbs/' . basename($localImagePath);
+        if (file_exists($thumbPath)) {
+            @unlink($thumbPath);
+        }
+    }
+
+    if ($deleteError !== '') {
+        $_SESSION['admin_recipe_notice'] = ['type' => 'error', 'message' => $deleteError];
+    } else {
+        $_SESSION['admin_recipe_notice'] = [
+            'type' => 'success',
+            'message' => 'Resep "' . ($deletedTitle !== '' ? $deletedTitle : ('#' . $deleteId)) . '" berhasil dihapus.'
+        ];
+    }
+
+    header('Location: ' . $_SERVER['REQUEST_URI']);
+    exit;
+}
+
 // Filters
 $selectedCategory = $_GET['kategori'] ?? '';
 $selectedDifficulty = $_GET['kesulitan'] ?? '';
@@ -81,10 +157,19 @@ if ($stmt) {
 $totalPages = (int) ceil($totalRecipes / $limit);
 
 $categories = getUniqueCategories();
+$adminNotice = $_SESSION['admin_recipe_notice'] ?? null;
+unset($_SESSION['admin_recipe_notice']);
 ?>
 
 <section class="all-resep-page">
     <div class="container">
+        <?php if ($isAdmin && is_array($adminNotice) && !empty($adminNotice['message'])): ?>
+            <div class="admin-recipe-notice <?= ($adminNotice['type'] ?? '') === 'error' ? 'is-error' : 'is-success' ?>">
+                <i class="fas <?= ($adminNotice['type'] ?? '') === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check' ?>"></i>
+                <span><?= htmlspecialchars((string)$adminNotice['message']) ?></span>
+            </div>
+        <?php endif; ?>
+
         <div class="all-resep-header">
             <form class="all-resep-search" method="get">
                 <input type="hidden" name="page" value="all_resep">
@@ -238,6 +323,14 @@ $categories = getUniqueCategories();
                                                 data-recipe-id="<?= $recipe['id'] ?>">
                                             <i class="<?= $is_fav ? 'fas' : 'far' ?> fa-heart"></i>
                                         </button>
+                                        <?php if ($isAdmin): ?>
+                                            <form method="post" class="delete-recipe-form" onsubmit="return confirm('Hapus resep ini secara permanen?');">
+                                                <input type="hidden" name="delete_recipe_id" value="<?= (int)$recipe['id'] ?>">
+                                                <button type="submit" class="delete-recipe-btn" title="Hapus Resep">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
